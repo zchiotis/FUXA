@@ -22,6 +22,7 @@ import { TagPropertyEditWebcamComponent, TagPropertyWebcamData } from './tag-pro
 import { TagPropertyEditMelsecComponent } from './tag-property-edit-melsec/tag-property-edit-melsec.component';
 import { TagPropertyEditRedisComponent, TagPropertyRedisData } from './tag-property-edit-redis/tag-property-edit-redis.component';
 import { TagPropertyRedisScanComponent, TagPropertyRedisScanData } from './tag-property-edit-redis/tag-property-redis-scan/tag-property-redis-scan.component';
+import { KawasakiTagDialogData, TagPropertyEditKawasakiComponent } from './tag-property-edit-kawasaki/tag-property-edit-kawasaki.component';
 
 @Injectable({
     providedIn: 'root'
@@ -521,6 +522,57 @@ export class TagPropertyService {
                         this.checkToAdd(tag, device);
                     }
                     this.projectService.setDeviceTags(device);
+                }
+                dialogRef.close();
+                return result;
+            })
+        );
+    }
+
+    public editTagPropertyKawasaki(device: Device, tag: Tag, checkToAdd: boolean, tagsMap?: any): Observable<any> {
+        const oldTagId = tag.id;
+        const tagToEdit: Tag = Utils.clone(tag);
+        const dialogRef = this.dialog.open(TagPropertyEditKawasakiComponent, {
+            disableClose: true,
+            data: <KawasakiTagDialogData>{
+                device,
+                tag: tagToEdit,
+                checkToAdd
+            },
+            position: { top: '60px' }
+        });
+
+        return dialogRef.componentInstance.result.pipe(
+            map(result => {
+                if (result?.definitions) {
+                    result.definitions.forEach(definition => {
+                        const newTag = new Tag(Utils.getGUID(TAG_PREFIX));
+                        newTag.name = definition.name;
+                        newTag.label = definition.label;
+                        newTag.address = definition.address;
+                        newTag.type = definition.type;
+                        newTag.description = definition.label;
+                        this.checkToAdd(newTag, device);
+                        if (tagsMap) {
+                            tagsMap[newTag.id] = newTag;
+                        }
+                    });
+                    this.projectService.setDeviceTags(device);
+                } else if (result) {
+                    tag.name = result.tagName;
+                    tag.address = result.tagAddress;
+                    tag.type = result.tagType;
+                    tag.description = result.tagDescription;
+                    if (checkToAdd) {
+                        this.checkToAdd(tag, device);
+                    } else if (tag.id !== oldTagId) {
+                        delete device.tags[oldTagId];
+                        this.checkToAdd(tag, device);
+                    }
+                    this.projectService.setDeviceTags(device);
+                    if (tagsMap) {
+                        tagsMap[tag.id] = tag;
+                    }
                 }
                 dialogRef.close();
                 return result;

@@ -1,0 +1,77 @@
+<form [formGroup]="formGroup" class="container">
+    <h1 mat-dialog-title class="dialog-title" mat-dialog-draggable>Kawasaki tag addresses</h1>
+    <mat-icon (click)="onNoClick()" class="dialog-close-btn">clear</mat-icon>
+
+    <div mat-dialog-content>
+        <div class="my-form-field item-block">
+            <span>{{'device.tag-property-device' | translate}}</span>
+            <input formControlName="deviceName" type="text" readonly>
+        </div>
+
+        <ng-container *ngIf="data.checkToAdd; else editTag">
+            <div class="my-form-field item-block mt10">
+                <span>Filter addresses</span>
+                <input [(ngModel)]="filterText" [ngModelOptions]="{standalone: true}" type="text">
+            </div>
+
+            <div class="selection-actions mt10">
+                <button mat-stroked-button color="primary" type="button" (click)="selectAllFiltered()" [disabled]="loading || selectableDefinitions.length === 0">
+                    <mat-icon>playlist_add_check</mat-icon>
+                    Select all ({{selectableDefinitions.length}})
+                </button>
+                <button mat-button type="button" (click)="clearSelection()" [disabled]="selectedAddresses.length === 0">Clear</button>
+                <span>{{selectedAddresses.length}} selected</span>
+            </div>
+
+            <div class="my-form-field item-block mt10">
+                <span>Addresses</span>
+                <mat-select [(ngModel)]="selectedAddresses" [ngModelOptions]="{standalone: true}" multiple [disabled]="loading">
+                    <mat-option *ngFor="let item of filteredDefinitions" [value]="item.address" [disabled]="isExisting(item.address)">
+                        <span class="address-option">{{item.address}}</span>
+                        <span class="type-option">{{item.type}}{{isExisting(item.address) ? ' - added' : ''}}</span>
+                    </mat-option>
+                </mat-select>
+            </div>
+        </ng-container>
+
+        <ng-template #editTag>
+            <div class="my-form-field item-block mt10">
+                <span>{{'device.tag-property-name' | translate}}</span>
+                <input formControlName="tagName" type="text">
+                <span *ngIf="formGroup.controls.tagName.errors?.name" class="form-input-error">
+                    {{formGroup.controls.tagName.errors?.name}}
+                </span>
+            </div>
+            <div class="my-form-field item-block mt10">
+                <span>Address</span>
+                <mat-select formControlName="tagAddress" (selectionChange)="onAddressChanged($event.value)" [disabled]="loading">
+                    <mat-option *ngFor="let item of definitions" [value]="item.address" [disabled]="isExisting(item.address)">
+                        <span class="address-option">{{item.address}}</span>
+                        <span class="type-option">{{item.type}}</span>
+                    </mat-option>
+                </mat-select>
+            </div>
+            <div class="my-form-field item-block mt10">
+                <span>{{'device.tag-property-type' | translate}}</span>
+                <input formControlName="tagType" type="text" readonly>
+            </div>
+            <div class="my-form-field item-block mt10">
+                <span>{{'device.tag-property-description' | translate}}</span>
+                <input formControlName="tagDescription" type="text">
+            </div>
+        </ng-template>
+
+        <div *ngIf="loading" class="loading mt10">
+            <mat-progress-spinner mode="indeterminate" diameter="26"></mat-progress-spinner>
+            <span>Loading addresses...</span>
+        </div>
+    </div>
+
+    <div mat-dialog-actions class="dialog-action">
+        <button mat-raised-button type="button" (click)="onNoClick()">{{'dlg.cancel' | translate}}</button>
+        <button mat-raised-button type="button" color="primary" (click)="onOkClick()"
+            [disabled]="loading || (data.checkToAdd ? selectedAddresses.length === 0 : formGroup.invalid)">
+            {{'dlg.ok' | translate}}
+        </button>
+    </div>
+</form>

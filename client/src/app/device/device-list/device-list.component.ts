@@ -207,6 +207,11 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
             this.addOpcTags();
         } else if (this.deviceSelected.type === DeviceType.MQTTclient) {
             this.editTopics();
+        } else if (this.deviceSelected.type === DeviceType.Kawasaki) {
+            const tag = new Tag(Utils.getGUID(TAG_PREFIX));
+            this.tagPropertyService.editTagPropertyKawasaki(this.deviceSelected, tag, true, this.tagsMap).subscribe(() => {
+                this.bindToTable(this.deviceSelected.tags);
+            });
         } else {
             let tag = new Tag(Utils.getGUID(TAG_PREFIX));
             this.editTag(tag, true);
@@ -365,7 +370,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
             return;
         }
         if (this.deviceSelected.type === DeviceType.Kawasaki) {
-            this.tagPropertyService.editTagPropertyRedis(this.deviceSelected, tag, checkToAdd).subscribe(result => {
+            this.tagPropertyService.editTagPropertyKawasaki(this.deviceSelected, tag, checkToAdd, this.tagsMap).subscribe(result => {
                 this.tagsMap[tag.id] = tag;
                 this.bindToTable(this.deviceSelected.tags);
             });

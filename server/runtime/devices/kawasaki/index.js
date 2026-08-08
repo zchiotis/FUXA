@@ -34,6 +34,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     let tagMap = {};
     let receiveBuffer = '';
     let addDaq = null;
+    let latestSnapshot = {};
 
     this.init = function () {};
 
@@ -98,6 +99,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
                 }
             }
 
+            latestSnapshot = Object.assign({}, latestSnapshot, snapshot);
             const changed = await _updateVarsValue(snapshot);
             lastTimestampValue = Date.now();
             _emitValues(varsValue);
@@ -123,6 +125,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     this.load = function (_data) {
         varsValue = {};
         tagMap = {};
+        latestSnapshot = {};
         data = JSON.parse(JSON.stringify(_data));
         data.polling = Math.max(Number(data.polling) || 3000, 3000);
         const tags = data.tags || {};
@@ -182,14 +185,27 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     };
 
     this.browse = function () {
+        const definitions = new Map(DEFAULT_TAGS.map((tag) => [tag.address, tag]));
+        Object.keys(latestSnapshot).sort().forEach((address) => {
+            if (definitions.has(address)) {
+                return;
+            }
+            const value = latestSnapshot[address];
+            definitions.set(address, {
+                name: tagName(address, 'kawasaki_tag'),
+                label: address,
+                address,
+                type: typeof value === 'boolean' ? 'boolean' : (typeof value === 'number' ? 'number' : 'string')
+            });
+        });
         return Promise.resolve({
-            items: DEFAULT_TAGS.map((tag) => ({
+            items: Array.from(definitions.values()).map((tag) => ({
                 name: tag.name,
                 label: tag.label,
                 address: tag.address,
                 type: tag.type
             })),
-            total: DEFAULT_TAGS.length
+            total: definitions.size
         });
     };
 
@@ -647,13 +663,17 @@ function _stripCommandNoise(responseText, command) {
 const DEFAULT_TAGS = [
     { name: 'sta_mode', label: 'STA mode', address: 'sta.mode', type: 'string' },
     { name: 'sta_cycle_start', label: 'STA cycle start', address: 'sta.cycle_start', type: 'boolean' },
+    { name: 'sta_motor_power', label: 'STA motor power', address: 'sta.motor_power', type: 'boolean' },
     { name: 'sta_robot_status_raw', label: 'STA robot status raw', address: 'sta.robot_status_raw', type: 'string' },
     { name: 'sta_moving_program', label: 'STA moving program', address: 'sta.now_moving_program', type: 'string' },
     { name: 'sta_moving_step', label: 'STA moving step', address: 'sta.now_moving_step', type: 'number' },
     { name: 'sta_stepper_status', label: 'STA stepper status', address: 'sta.stepper_status', type: 'string' },
+    { name: 'sta_pc_status', label: 'STA PC status', address: 'sta.pc_status', type: 'string' },
     { name: 'sta_program_running', label: 'STA program running', address: 'sta.program_running', type: 'boolean' },
     { name: 'sta_program_name', label: 'STA program name', address: 'sta.program_name', type: 'string' },
+    { name: 'sta_program_priority', label: 'STA program priority', address: 'sta.program_priority', type: 'number' },
     { name: 'sta_program_step_no', label: 'STA program step no', address: 'sta.program_step_no', type: 'number' },
+    { name: 'sta_program_step_detail', label: 'STA program step detail', address: 'sta.program_step_detail', type: 'string' },
     { name: 'sta_completed_cycles', label: 'STA completed cycles', address: 'sta.completed_cycles', type: 'number' },
     { name: 'sta_remaining_cycles', label: 'STA remaining cycles', address: 'sta.remaining_cycles', type: 'number' },
     { name: 'sta_monitor_speed_percent', label: 'STA monitor speed percent', address: 'sta.monitor_speed_percent', type: 'number' },
@@ -661,12 +681,29 @@ const DEFAULT_TAGS = [
     { name: 'sta_program_speed_always_percent', label: 'STA program speed always percent', address: 'sta.program_speed_always_percent', type: 'number' },
     { name: 'sta_always_accu_mm', label: 'STA always accu mm', address: 'sta.always_accu_mm', type: 'number' },
     { name: 'sta_trailing_status_raw', label: 'STA trailing status raw', address: 'sta.trailing_status_raw', type: 'string' },
+    { name: 'sta_raw', label: 'STA raw response', address: 'sta.raw', type: 'string' },
     { name: 'opeinfo_header', label: 'OPEINFO header', address: 'opeinfo.header', type: 'string' },
+    { name: 'opeinfo_operation_date', label: 'OPEINFO operation date', address: 'opeinfo.operation_date', type: 'string' },
+    { name: 'opeinfo_file_load_date', label: 'OPEINFO file load date', address: 'opeinfo.file_load_date', type: 'string' },
     { name: 'opeinfo_hour_meter_h', label: 'OPEINFO hour meter', address: 'opeinfo.hour_meter_h', type: 'number' },
     { name: 'opeinfo_control_power_on_h', label: 'OPEINFO control power on', address: 'opeinfo.control_power_on_h', type: 'number' },
     { name: 'opeinfo_servo_on_h', label: 'OPEINFO servo on', address: 'opeinfo.servo_on_h', type: 'number' },
+    { name: 'opeinfo_motor_on_count', label: 'OPEINFO motor on count', address: 'opeinfo.motor_on_count', type: 'number' },
+    { name: 'opeinfo_servo_on_count', label: 'OPEINFO servo on count', address: 'opeinfo.servo_on_count', type: 'number' },
+    { name: 'opeinfo_estop_moving_count', label: 'OPEINFO E-STOP moving count', address: 'opeinfo.estop_moving_count', type: 'number' },
     { name: 'opeinfo_raw', label: 'OPEINFO raw', address: 'opeinfo.raw', type: 'string' }
 ];
+
+for (let axis = 1; axis <= 8; axis++) {
+    const prefix = `opeinfo.jt${axis}`;
+    DEFAULT_TAGS.push(
+        { name: `opeinfo_jt${axis}_section`, label: `OPEINFO JT${axis} section`, address: `${prefix}.section`, type: 'string' },
+        { name: `opeinfo_jt${axis}_move_time_h`, label: `OPEINFO JT${axis} move time`, address: `${prefix}.move_time_h`, type: 'number' },
+        { name: `opeinfo_jt${axis}_displacement_total`, label: `OPEINFO JT${axis} displacement total`, address: `${prefix}.displacement_total`, type: 'number' },
+        { name: `opeinfo_jt${axis}_displacement_positive`, label: `OPEINFO JT${axis} displacement positive`, address: `${prefix}.displacement_positive`, type: 'number' },
+        { name: `opeinfo_jt${axis}_displacement_negative`, label: `OPEINFO JT${axis} displacement negative`, address: `${prefix}.displacement_negative`, type: 'number' }
+    );
+}
 
 module.exports = {
     init: function () {},
