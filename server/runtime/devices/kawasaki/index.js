@@ -434,6 +434,15 @@ function parseScalar(value) {
     return text;
 }
 
+function parseLeadingNumber(value) {
+    const text = String(value == null ? '' : value).trim();
+    const match = text.match(/^(-?\d+(?:[.,]\d+)?)(?:\s|$)/);
+    if (!match) {
+        return parseScalar(text);
+    }
+    return Number(match[1].replace(',', '.'));
+}
+
 function tagName(value, fallback) {
     let base = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
     base = base.replace(/_+/g, '_').replace(/^_+|_+$/g, '');
@@ -552,7 +561,9 @@ function parseSta(responseText) {
         if (line.indexOf(':') !== -1) {
             const [name, ...rest] = line.split(':');
             result[`sta.${tagName(name, 'value')}`] = parseScalar(rest.join(':'));
+            continue;
         }
+        result['sta.trailing_status_raw'] = line;
     }
     return result;
 }
@@ -567,6 +578,11 @@ function parseOpeinfo(responseText) {
     for (const line of lines) {
         if (line.startsWith('Operation information (')) {
             result['opeinfo.header'] = line;
+            const headerMatch = line.match(/^Operation information\s*\((.*?)\)\s*\(\s*FILE LOAD\s+(.*?)\s*\)$/i);
+            if (headerMatch) {
+                result['opeinfo.operation_date'] = headerMatch[1].replace(/\s*-\s*$/, '').trim();
+                result['opeinfo.file_load_date'] = headerMatch[2].trim();
+            }
             continue;
         }
         if (/^JT\d+$/i.test(line)) {
@@ -577,7 +593,29 @@ function parseOpeinfo(responseText) {
         const pieces = line.split(/ {2,}/).map((x) => x.trim()).filter(Boolean);
         if (pieces.length >= 2) {
             const label = pieces.slice(0, -1).join(' ');
-            const value = parseScalar(pieces[pieces.length - 1]);
+            const valueText = pieces[pieces.length - 1];
+            const normalizedLabel = label.toLowerCase();
+            const globalKeys = {
+                'hour meter': 'hour_meter_h',
+                'time of control power on': 'control_power_on_h',
+                'time of servo on': 'servo_on_h',
+                'frequency of motor on': 'motor_on_count',
+                'frequency of servo on': 'servo_on_count',
+                'frequency of e-stop(moving)': 'estop_moving_count'
+            };
+            const axisKeys = {
+                'total time in move': 'move_time_h',
+                'total displacement': 'displacement_total',
+                'total displacement(+)': 'displacement_positive',
+                'total displacement(-)': 'displacement_negative'
+            };
+            const deterministicKey = currentAxis ? axisKeys[normalizedLabel] : globalKeys[normalizedLabel];
+            if (deterministicKey) {
+                result[currentAxis ? `opeinfo.${currentAxis}.${deterministicKey}` : `opeinfo.${deterministicKey}`] =
+                    parseLeadingNumber(valueText);
+                continue;
+            }
+            const value = parseScalar(valueText);
             const key = tagName(label, `line_${lineIndex + 1}`);
             result[currentAxis ? `opeinfo.${currentAxis}.${key}` : `opeinfo.${key}`] = value;
             continue;
@@ -610,7 +648,11 @@ const DEFAULT_TAGS = [
     { name: 'sta_program_speed_percent', label: 'STA program speed percent', address: 'sta.program_speed_percent', type: 'number' },
     { name: 'sta_program_speed_always_percent', label: 'STA program speed always percent', address: 'sta.program_speed_always_percent', type: 'number' },
     { name: 'sta_always_accu_mm', label: 'STA always accu mm', address: 'sta.always_accu_mm', type: 'number' },
+    { name: 'sta_trailing_status_raw', label: 'STA trailing status raw', address: 'sta.trailing_status_raw', type: 'string' },
     { name: 'opeinfo_header', label: 'OPEINFO header', address: 'opeinfo.header', type: 'string' },
+    { name: 'opeinfo_hour_meter_h', label: 'OPEINFO hour meter', address: 'opeinfo.hour_meter_h', type: 'number' },
+    { name: 'opeinfo_control_power_on_h', label: 'OPEINFO control power on', address: 'opeinfo.control_power_on_h', type: 'number' },
+    { name: 'opeinfo_servo_on_h', label: 'OPEINFO servo on', address: 'opeinfo.servo_on_h', type: 'number' },
     { name: 'opeinfo_raw', label: 'OPEINFO raw', address: 'opeinfo.raw', type: 'string' }
 ];
 
