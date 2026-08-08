@@ -19,6 +19,7 @@ var GpioClient = require('./gpio');
 var WebCamClient = require('./webcam');
 var MELSECclient = require('./melsec');
 var REDISclient = require('./redis');
+var KawasakiClient = require('./kawasaki');
 
 const path = require('path');
 const utils = require('../utils');
@@ -125,6 +126,12 @@ function Device(data, runtime) {
             return null;
         }
         comm = REDISclient.create(data, logger, events, manager, runtime);
+    } else if (data.type === DeviceEnum.Kawasaki) {
+        if (!KawasakiClient) {
+            return null;
+        }
+        data.polling = Math.max(Number(data.polling) || 3000, 3000);
+        comm = KawasakiClient.create(data, logger, events, manager, runtime);
     }
     // else if (data.type === DeviceEnum.Template) {
     //     if (!TEMPLATEclient) {
@@ -251,6 +258,9 @@ function Device(data, runtime) {
      * Call Device to load Tags propperty in local for polling read values
      */
     this.load = function (data) {
+        if (data.type === DeviceEnum.Kawasaki) {
+            data.polling = Math.max(Number(data.polling) || 3000, 3000);
+        }
         pollingInterval = data.polling || ((data.type === DeviceEnum.FuxaServer) ? SERVER_POLLING_INTERVAL : DEVICE_POLLING_INTERVAL);
         data.polling = pollingInterval;
         return comm.load(data);
@@ -315,6 +325,12 @@ function Device(data, runtime) {
                     reject(err);
                 });
             } else if (data.type === DeviceEnum.REDIS) {
+                comm.browse(path, callback).then(function (result) {
+                    resolve(result);
+                }).catch(function (err) {
+                    reject(err);
+                });
+            } else if (data.type === DeviceEnum.Kawasaki) {
                 comm.browse(path, callback).then(function (result) {
                     resolve(result);
                 }).catch(function (err) {
@@ -552,6 +568,8 @@ function loadPlugin(type, module) {
         MELSECclient = require(module);
     } else if (type === DeviceEnum.REDIS) {
         REDISclient = require(module);
+    } else if (type === DeviceEnum.Kawasaki) {
+        KawasakiClient = require(module);
     }
 }
 
@@ -595,6 +613,7 @@ var DeviceEnum = {
     WebCam: 'WebCam',
     MELSEC: 'MELSEC',
     REDIS: 'REDIS',
+    Kawasaki: 'Kawasaki',
     // Template: 'template'
 }
 

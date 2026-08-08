@@ -293,6 +293,26 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
         } else {
 			this.pollingType = this.pollingPlcType;
 		}
+		if (this.data.device.type === DeviceType.Kawasaki) {
+			if (!this.data.device.polling || this.data.device.polling < 3000) {
+				this.data.device.polling = 3000;
+			}
+			if (!this.data.device.property.port) {
+				this.data.device.property.port = 23;
+			}
+			if (!this.data.device.property.loginCommand) {
+				this.data.device.property.loginCommand = 'as';
+			}
+			if (!this.data.device.property.readyMarker) {
+				this.data.device.property.readyMarker = '>';
+			}
+			if (!this.data.device.property.timeoutMs) {
+				this.data.device.property.timeoutMs = 10000;
+			}
+			if (this.data.device.property.opeinfo === undefined) {
+				this.data.device.property.opeinfo = true;
+			}
+		}
 	}
 
 	isValid(device): boolean {

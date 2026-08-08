@@ -143,6 +143,7 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
             });
             this.plugins.push(DeviceType.WebAPI);
             this.plugins.push(DeviceType.MQTTclient);
+            this.plugins.push(DeviceType.Kawasaki);
             this.plugins.push(DeviceType.internal);
         } else {
             this.plugins.push(DeviceType.internal);
@@ -514,6 +515,14 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
                         if (device.type === DeviceType.MELSEC) {
                             device.property.ascii = tempdevice.property.ascii;
                             device.property.octalIO = tempdevice.property.octalIO;
+                        }
+                        if (device.type === DeviceType.Kawasaki) {
+                            device.polling = Math.max(Number(tempdevice.polling) || 3000, 3000);
+                            device.property.loginCommand = tempdevice.property.loginCommand || 'as';
+                            device.property.readyMarker = tempdevice.property.readyMarker || '>';
+                            device.property.timeoutMs = parseInt(tempdevice.property.timeoutMs) || 10000;
+                            device.property.extendTimeoutMs = parseInt(tempdevice.property.extendTimeoutMs) || undefined;
+                            device.property.opeinfo = tempdevice.property.opeinfo !== false;
                         }
                         if (tempdevice.property.connectionOption) {
                             device.property.connectionOption = tempdevice.property.connectionOption;
