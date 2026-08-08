@@ -33,6 +33,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     let varsValue = {};
     let tagMap = {};
     let receiveBuffer = '';
+    let addDaq = null;
 
     this.init = function () {};
 
@@ -86,17 +87,25 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
             Object.assign(snapshot, parseSta(staText));
             snapshot['sta.raw'] = staText;
 
+            let commandError = null;
             if (_isOpeinfoEnabled()) {
-                const opeinfoText = await _runCommand('opeinfo', { paged: true });
-                Object.assign(snapshot, parseOpeinfo(opeinfoText));
-                snapshot['opeinfo.raw'] = _stripCommandNoise(opeinfoText, 'opeinfo');
+                try {
+                    const opeinfoText = await _runCommand('opeinfo', { paged: true });
+                    Object.assign(snapshot, parseOpeinfo(opeinfoText));
+                    snapshot['opeinfo.raw'] = _stripCommandNoise(opeinfoText, 'opeinfo');
+                } catch (err) {
+                    commandError = err;
+                }
             }
 
             const changed = await _updateVarsValue(snapshot);
             lastTimestampValue = Date.now();
             _emitValues(varsValue);
-            if (this.addDaq && changed && !utils.isEmptyObject(changed)) {
-                this.addDaq(changed, data.name, data.id);
+            if (addDaq && changed && !utils.isEmptyObject(changed)) {
+                addDaq(changed, data.name, data.id);
+            }
+            if (commandError) {
+                throw commandError;
             }
             if (lastStatus !== 'connect-ok') {
                 _emitStatus('connect-ok');
@@ -160,9 +169,8 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     };
 
     this.bindAddDaq = function (fnc) {
-        this.addDaq = fnc;
+        addDaq = fnc;
     };
-    this.addDaq = null;
 
     this.lastReadTimestamp = () => lastTimestampValue;
 
@@ -218,27 +226,24 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         receiveBuffer = '';
         _sendLine(command);
         const startedAt = Date.now();
+        let deadline = startedAt + _timeoutMs();
+        const hardDeadline = startedAt + Math.max(_timeoutMs() * 6, 60000);
         let response = '';
-        while (Date.now() - startedAt < _timeoutMs()) {
+        while (Date.now() < deadline && Date.now() < hardDeadline) {
             await _sleep(DEFAULT_READ_WINDOW_MS);
             if (receiveBuffer) {
                 response += receiveBuffer;
                 receiveBuffer = '';
+                deadline = Math.max(deadline, Date.now() + _extendMs());
             }
             if (options && options.paged && response.indexOf(PAGE_MARKER) !== -1) {
                 response = response.replace(PAGE_MARKER, '');
                 _sendRaw(' ');
+                deadline = Math.max(deadline, Date.now() + _timeoutMs());
                 continue;
             }
             if (_hasFinalPrompt(response, command)) {
-                await _sleep(_extendMs());
-                if (receiveBuffer) {
-                    response += receiveBuffer;
-                    receiveBuffer = '';
-                }
-                if (_hasFinalPrompt(response, command)) {
-                    return response;
-                }
+                return response;
             }
         }
         throw new Error(`Timed out waiting for ${command} response`);
@@ -312,7 +317,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
                 tagref: tag,
                 timestamp
             };
-            if (this.addDaq && deviceUtils.tagDaqToSave(item, timestamp)) {
+            if (addDaq && deviceUtils.tagDaqToSave(item, timestamp)) {
                 changed[id] = item;
             }
             item.changed = false;
@@ -384,8 +389,15 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
 
     function _hasFinalPrompt(text, command) {
         const prompt = _readyMarker();
-        const cleaned = _stripCommandNoise(text, command);
-        return cleaned.trimEnd().endsWith(prompt) || text.endsWith(prompt);
+        const lines = String(text || '').replace(/\r/g, '\n').split('\n');
+        for (let index = lines.length - 1; index >= 0; index--) {
+            const line = lines[index].trim();
+            if (!line) {
+                continue;
+            }
+            return line === prompt;
+        }
+        return false;
     }
 }
 
