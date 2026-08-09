@@ -35,6 +35,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     let receiveBuffer = '';
     let addDaq = null;
     let latestSnapshot = {};
+    let sessionMonitor = '';
 
     this.init = function () {};
 
@@ -84,6 +85,9 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
             }
 
             const snapshot = {};
+            if (sessionMonitor) {
+                snapshot['session.monitor'] = sessionMonitor;
+            }
             const staText = await _runCommand('sta', { paged: false });
             Object.assign(snapshot, parseSta(staText));
             snapshot['sta.raw'] = staText;
@@ -126,6 +130,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         varsValue = {};
         tagMap = {};
         latestSnapshot = {};
+        sessionMonitor = '';
         data = JSON.parse(JSON.stringify(_data));
         data.polling = Math.max(Number(data.polling) || 3000, 3000);
         const tags = data.tags || {};
@@ -212,6 +217,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     async function _openSession() {
         await _closeSocket();
         receiveBuffer = '';
+        sessionMonitor = '';
         const host = _host();
         if (!host) {
             throw new Error('Kawasaki host is required');
@@ -235,7 +241,13 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
             // Some controllers may already be logged in or show only the AS prompt.
         }
         _sendLine(_loginCommand());
-        await _waitForPrompt();
+        const loginResponse = await _waitForPrompt();
+        sessionMonitor = parseMonitorName(loginResponse);
+        if (sessionMonitor) {
+            logger.info(`'${data.name}' Kawasaki monitor terminal ${sessionMonitor}`, true);
+        } else {
+            logger.warn(`'${data.name}' Kawasaki monitor terminal name was not found in the login response`);
+        }
     }
 
     async function _runCommand(command, options) {
@@ -275,8 +287,9 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
             const timer = setInterval(() => {
                 if (receiveBuffer.indexOf(marker) !== -1) {
                     clearInterval(timer);
+                    const response = receiveBuffer;
                     receiveBuffer = '';
-                    resolve(true);
+                    resolve(response);
                     return;
                 }
                 if (Date.now() - startedAt > timeoutMs) {
@@ -444,6 +457,16 @@ function sanitizeTelnetText(data) {
         const code = char.charCodeAt(0);
         return char === '\r' || char === '\n' || char === '\t' || code >= 32;
     }).join('');
+}
+
+function parseMonitorName(responseText) {
+    const text = String(responseText || '');
+    const quoted = text.match(/This\s+is\s+AS\s+monitor\s+terminal\s+"([^"\r\n]+)"/i);
+    if (quoted) {
+        return quoted[1].trim();
+    }
+    const unquoted = text.match(/This\s+is\s+AS\s+monitor\s+terminal\s+([^\r\n]+)/i);
+    return unquoted ? unquoted[1].trim() : '';
 }
 
 function parseScalar(value) {
@@ -661,6 +684,7 @@ function _stripCommandNoise(responseText, command) {
 }
 
 const DEFAULT_TAGS = [
+    { name: 'session_monitor', label: 'Session monitor terminal', address: 'session.monitor', type: 'string' },
     { name: 'sta_mode', label: 'STA mode', address: 'sta.mode', type: 'string' },
     { name: 'sta_cycle_start', label: 'STA cycle start', address: 'sta.cycle_start', type: 'boolean' },
     { name: 'sta_motor_power', label: 'STA motor power', address: 'sta.motor_power', type: 'boolean' },
@@ -712,5 +736,6 @@ module.exports = {
     },
     parseSta,
     parseOpeinfo,
+    parseMonitorName,
     DEFAULT_TAGS
 };
