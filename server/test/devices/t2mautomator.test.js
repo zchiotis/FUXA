@@ -49,4 +49,21 @@ describe('Talk2M Automator coordinator', function () {
         assert.strictEqual(collected.get('tag-delta-1').timestamp, 1770000000000);
         assert.strictEqual(collected.get('tag-delta-1').sourceTimestamp, 1787122800000);
     });
+
+    it('reads required values directly from the active FUXA runtime store', function () {
+        const requested = [];
+        const values = _test.readRuntimeTagValues(
+            new Set(['tag-delta-1', 'tag-delta-2']),
+            (id) => {
+                requested.push(id);
+                return id === 'tag-delta-1'
+                    ? { id, value: 7, ts: 1787122900000 }
+                    : null;
+            });
+
+        assert.deepStrictEqual(requested, ['tag-delta-1', 'tag-delta-2']);
+        assert.deepStrictEqual(values, {
+            'tag-delta-1': { id: 'tag-delta-1', value: 7, ts: 1787122900000 },
+        });
+    });
 });

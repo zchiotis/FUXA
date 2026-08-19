@@ -29,6 +29,10 @@ VPN connection. The original device timestamp is preserved as `sourceTimestamp`.
 If the collection timeout expires, FUXA performs the same safe cleanup and moves
 to the next available site after the configured failure delay.
 
+During collection the coordinator also reads every required tag directly from
+the active FUXA runtime value store. This fallback covers drivers whose values
+are visible to FUXA but do not emit a usable `device-value:changed` event.
+
 Before changing or disconnecting the VPN, FUXA stops all mapped device
 connections. If any connection cannot be stopped, the VPN is left unchanged and
 `cycle.last_error` reports the failure.

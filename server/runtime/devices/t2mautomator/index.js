@@ -52,14 +52,7 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
         if (receivedAt < activeCycle.startedAt) {
             return;
         }
-        if (collectFreshValues(
-            event.values,
-            activeCycle.requiredTagIds,
-            freshTagValues,
-            receivedAt)) {
-            activeCycle.updatedTags = freshTagValues.size;
-            publishCycleTags();
-        }
+        acceptFreshValues(event.values, receivedAt, 'event');
     };
     events.on('device-value:changed', onDeviceValues);
 
@@ -208,10 +201,7 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
                 await runtime.devices.setDeviceRuntimeEnabled(deviceName, true);
                 activeCycle.enabledDevices.add(deviceName);
             }
-            await waitUntil(
-                () => freshTagValues.size >= activeCycle.requiredTags,
-                collectionTimeoutMs(),
-                () => stopping);
+            await waitForRequiredTags();
             activeCycle.lastSuccessAt = Date.now();
             activeCycle.lastError = '';
             setCycleState('ready');
@@ -258,6 +248,40 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
         const names = new Set();
         mappings().forEach((mapping) => normalizeList(mapping.connections).forEach((name) => names.add(name)));
         await disableDevices(Array.from(names));
+    }
+
+    async function waitForRequiredTags() {
+        const started = Date.now();
+        while (freshTagValues.size < activeCycle.requiredTags) {
+            const receivedAt = Date.now();
+            const runtimeValues = readRuntimeTagValues(
+                activeCycle.requiredTagIds,
+                (tagId) => runtime.devices.getTagValue(tagId, true));
+            acceptFreshValues(runtimeValues, receivedAt, 'runtime');
+            if (stopping) {
+                throw new Error('Collection stopped');
+            }
+            if (receivedAt - started > collectionTimeoutMs()) {
+                const missing = Array.from(activeCycle.requiredTagIds)
+                    .filter((id) => !freshTagValues.has(id));
+                throw new Error(`Timed out waiting for ${missing.length} fresh required tags: ${missing.join(', ')}`);
+            }
+            await delay(250);
+        }
+    }
+
+    function acceptFreshValues(values, receivedAt, source) {
+        const before = freshTagValues.size;
+        collectFreshValues(
+            values,
+            activeCycle.requiredTagIds,
+            freshTagValues,
+            receivedAt);
+        if (freshTagValues.size > before) {
+            activeCycle.updatedTags = freshTagValues.size;
+            publishCycleTags();
+            logger.info(`'${data.name}' collected ${activeCycle.updatedTags}/${activeCycle.requiredTags} required tags from ${source}`, true);
+        }
     }
 
     async function disableDevices(names) {
@@ -422,6 +446,17 @@ function collectFreshValues(values, requiredTagIds, freshTagValues, receivedAt =
     return collected;
 }
 
+function readRuntimeTagValues(requiredTagIds, getTagValue) {
+    const values = {};
+    requiredTagIds.forEach((id) => {
+        const tag = getTagValue(id);
+        if (tag) {
+            values[id] = tag;
+        }
+    });
+    return values;
+}
+
 function parseTimestamp(value) {
     if (value === null || value === undefined || value === '') {
         return null;
@@ -521,5 +556,5 @@ module.exports = {
     },
     getSites,
     TAG_DEFINITIONS,
-    _test: { collectFreshValues, normalizeList, parseTimestamp, sameText, safeName, responseSites, waitUntil },
+    _test: { collectFreshValues, normalizeList, parseTimestamp, readRuntimeTagValues, sameText, safeName, responseSites, waitUntil },
 };
