@@ -13,6 +13,7 @@ const utils = require('../../utils');
 const DEFAULT_ENDPOINT = 'http://127.0.0.1:17831';
 const DEFAULT_TIMEOUT_SECONDS = 90;
 const DEFAULT_CYCLE_DELAY_SECONDS = 300;
+const DEFAULT_FAILURE_DELAY_SECONDS = 5;
 
 const TAG_DEFINITIONS = [
     { address: 'automator.alive', name: 'automator_alive', label: 'Automator reachable', type: 'boolean' },
@@ -47,22 +48,18 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
         if (!cyclePromise || !event || !event.values) {
             return;
         }
-        Object.values(event.values).forEach((tag) => {
-            if (!tag || !activeCycle.requiredTagIds.has(tag.id)) {
-                return;
-            }
-            const timestamp = Number(tag.timestamp || tag.ts || Date.now());
-            if (timestamp >= activeCycle.startedAt && tag.value !== null && tag.value !== undefined) {
-                freshTagValues.set(tag.id, {
-                    id: tag.id,
-                    value: tag.value,
-                    timestamp,
-                    quality: tag.quality,
-                });
-                activeCycle.updatedTags = freshTagValues.size;
-                publishCycleTags();
-            }
-        });
+        const receivedAt = Date.now();
+        if (receivedAt < activeCycle.startedAt) {
+            return;
+        }
+        if (collectFreshValues(
+            event.values,
+            activeCycle.requiredTagIds,
+            freshTagValues,
+            receivedAt)) {
+            activeCycle.updatedTags = freshTagValues.size;
+            publishCycleTags();
+        }
     };
     events.on('device-value:changed', onDeviceValues);
 
@@ -114,11 +111,15 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
             if (autoCycle() && !cyclePromise && Date.now() >= nextCycleAt) {
                 const mapping = nextMapping();
                 if (mapping) {
+                    let cycleSucceeded = false;
                     cyclePromise = runCycle(mapping)
+                        .then(() => { cycleSucceeded = true; })
                         .catch((err) => logger.error(`'${data.name}' cycle failed: ${message(err)}`))
                         .finally(() => {
                             cyclePromise = null;
-                            nextCycleAt = Date.now() + cycleDelayMs();
+                            nextCycleAt = Date.now() + (cycleSucceeded
+                                ? cycleDelayMs()
+                                : failureDelayMs());
                         });
                 }
             }
@@ -393,6 +394,44 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
     function cycleDelayMs() {
         return Math.max(Number(data.property?.cycleDelaySeconds) || DEFAULT_CYCLE_DELAY_SECONDS, 5) * 1000;
     }
+
+    function failureDelayMs() {
+        return Math.max(Number(data.property?.failureDelaySeconds) || DEFAULT_FAILURE_DELAY_SECONDS, 1) * 1000;
+    }
+}
+
+function collectFreshValues(values, requiredTagIds, freshTagValues, receivedAt = Date.now()) {
+    let collected = false;
+    Object.entries(values || {}).forEach(([key, tag]) => {
+        if (!tag) {
+            return;
+        }
+        const id = String(tag.id || key);
+        if (!requiredTagIds.has(id) || tag.value === null || tag.value === undefined) {
+            return;
+        }
+        freshTagValues.set(id, {
+            id,
+            value: tag.value,
+            timestamp: receivedAt,
+            sourceTimestamp: parseTimestamp(tag.timestamp ?? tag.ts),
+            quality: tag.quality,
+        });
+        collected = true;
+    });
+    return collected;
+}
+
+function parseTimestamp(value) {
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+        return numeric;
+    }
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
 }
 
 function createCycleState(mapping) {
@@ -482,5 +521,5 @@ module.exports = {
     },
     getSites,
     TAG_DEFINITIONS,
-    _test: { normalizeList, sameText, safeName, responseSites, waitUntil },
+    _test: { collectFreshValues, normalizeList, parseTimestamp, sameText, safeName, responseSites, waitUntil },
 };

@@ -486,6 +486,11 @@
                         <input numberOnly [(ngModel)]="data.device.property.cycleDelaySeconds"
                             style="width: 75px" type="text">
                     </div>
+                    <div class="my-form-field inbk mb10 ml10">
+                        <span>After failure s</span>
+                        <input numberOnly [(ngModel)]="data.device.property.failureDelaySeconds"
+                            style="width: 75px" type="text">
+                    </div>
 
                     <div class="t2m-mapping-header">
                         <strong>Site mappings</strong>
@@ -514,7 +519,12 @@
                             </mat-select>
                         </div>
                         <div class="my-form-field">
-                            <span>Required tags</span>
+                            <span>Required tags
+                                <button mat-icon-button matTooltip="Select all tags from selected connections"
+                                    (click)="selectAllT2MTags(mapping)">
+                                    <mat-icon>done_all</mat-icon>
+                                </button>
+                            </span>
                             <mat-select multiple [(value)]="mapping.requiredTags" style="width: 230px">
                                 <mat-option *ngFor="let tag of data.availableTags" [value]="tag.id">
                                     {{tag.name}}

@@ -490,7 +490,8 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
                     .reduce((tags: any[], item: Device) => tags.concat(
                         Object.values(item.tags || {}).map((tag: any) => ({
                             id: tag.id,
-                            name: `${item.name} / ${tag.name}`
+                            name: `${item.name} / ${tag.name}`,
+                            deviceName: item.name
                         }))), [])
             },
             position: { top: '60px' }
@@ -549,6 +550,7 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
                             device.property.commandTimeoutSeconds = Number(tempdevice.property.commandTimeoutSeconds) || 120;
                             device.property.collectionTimeoutSeconds = Number(tempdevice.property.collectionTimeoutSeconds) || 90;
                             device.property.cycleDelaySeconds = Number(tempdevice.property.cycleDelaySeconds) || 300;
+                            device.property.failureDelaySeconds = Number(tempdevice.property.failureDelaySeconds) || 5;
                             device.property.mappings = tempdevice.property.mappings || [];
                         }
                         if (tempdevice.property.connectionOption) {

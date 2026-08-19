@@ -32,4 +32,21 @@ describe('Talk2M Automator coordinator', function () {
         assert.ok(addresses.includes('cycle.updated_tags'));
         assert.ok(addresses.includes('cycle.last_error'));
     });
+
+    it('accepts a fresh value when its id is only present as the values map key', function () {
+        const required = new Set(['tag-delta-1']);
+        const collected = new Map();
+
+        const changed = _test.collectFreshValues({
+            'tag-delta-1': {
+                value: 42,
+                timestamp: '2026-08-19T07:00:00.000Z',
+            },
+        }, required, collected, 1770000000000);
+
+        assert.strictEqual(changed, true);
+        assert.strictEqual(collected.size, 1);
+        assert.strictEqual(collected.get('tag-delta-1').timestamp, 1770000000000);
+        assert.strictEqual(collected.get('tag-delta-1').sourceTimestamp, 1787122800000);
+    });
 });

@@ -212,6 +212,7 @@ export class DeviceNetProperty {
     commandTimeoutSeconds?: number;
     collectionTimeoutSeconds?: number;
     cycleDelaySeconds?: number;
+    failureDelaySeconds?: number;
     mappings?: T2MSiteMapping[];
 
     static descriptor = {

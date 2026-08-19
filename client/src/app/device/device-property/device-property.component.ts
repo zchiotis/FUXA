@@ -366,6 +366,13 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 		this.data.device.property.mappings.splice(index, 1);
 	}
 
+	selectAllT2MTags(mapping) {
+		const connections = new Set(mapping.connections || []);
+		mapping.requiredTags = (this.data.availableTags || [])
+			.filter(tag => !connections.size || connections.has(tag.deviceName))
+			.map(tag => tag.id);
+	}
+
 	private patchT2MSites() {
 		this.ensureT2MDefaults();
 		this.t2mSites.filter(site => site.enabled !== false).forEach(site => {
@@ -397,6 +404,7 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 		property.commandTimeoutSeconds = Number(property.commandTimeoutSeconds) || 120;
 		property.collectionTimeoutSeconds = Number(property.collectionTimeoutSeconds) || 90;
 		property.cycleDelaySeconds = Number(property.cycleDelaySeconds) || 300;
+		property.failureDelaySeconds = Number(property.failureDelaySeconds) || 5;
 		property.mappings = Array.isArray(property.mappings) ? property.mappings : [];
 		property.mappings.forEach(mapping => {
 			mapping.connections = Array.isArray(mapping.connections) ? mapping.connections : [];

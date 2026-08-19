@@ -24,6 +24,11 @@ value with a timestamp newer than the verified VPN connection. FUXA then emits
 the `t2m-cycle:ready` runtime event and updates the automatically created cycle
 tags. These tags can be selected by an MQTT or ThingsBoard reporting connection.
 
+Freshness is based on the time the coordinator receives a value event after the
+VPN connection. The original device timestamp is preserved as `sourceTimestamp`.
+If the collection timeout expires, FUXA performs the same safe cleanup and moves
+to the next available site after the configured failure delay.
+
 Before changing or disconnecting the VPN, FUXA stops all mapped device
 connections. If any connection cannot be stopped, the VPN is left unchanged and
 `cycle.last_error` reports the failure.
