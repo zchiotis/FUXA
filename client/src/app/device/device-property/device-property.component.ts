@@ -7,7 +7,21 @@ import { TranslateService } from '@ngx-translate/core';
 import { EndPointSettings, HmiService } from '../../_services/hmi.service';
 import { AppService } from '../../_services/app.service';
 import { ProjectService } from '../../_services/project.service';
-import { DeviceType, DeviceSecurity, MessageSecurityMode, SecurityPolicy, ModbusOptionType, ModbusReuseModeType, RedisReadModeType, RedisOptions } from './../../_models/device';
+import { DeviceType, DeviceSecurity, MessageSecurityMode, SecurityPolicy, ModbusOptionType, ModbusReuseModeType, RedisReadModeType, RedisOptions, Tag, TAG_PREFIX } from './../../_models/device';
+import { Utils } from '../../_helpers/utils';
+
+const T2M_STATUS_TAGS = [
+	{ address: 'automator.alive', name: 'automator_alive', label: 'Automator reachable', type: 'boolean' },
+	{ address: 'ecatcher.running', name: 'ecatcher_running', label: 'eCatcher running', type: 'boolean' },
+	{ address: 'ecatcher.connected_site', name: 'ecatcher_connected_site', label: 'Connected site', type: 'string' },
+	{ address: 'sites.online_count', name: 'sites_online_count', label: 'Online sites', type: 'number' },
+	{ address: 'cycle.state', name: 'cycle_state', label: 'Collection state', type: 'string' },
+	{ address: 'cycle.site', name: 'cycle_site', label: 'Collection site', type: 'string' },
+	{ address: 'cycle.required_tags', name: 'cycle_required_tags', label: 'Required tags', type: 'number' },
+	{ address: 'cycle.updated_tags', name: 'cycle_updated_tags', label: 'Fresh tags', type: 'number' },
+	{ address: 'cycle.last_success_at', name: 'cycle_last_success_at', label: 'Last success timestamp', type: 'number' },
+	{ address: 'cycle.last_error', name: 'cycle_last_error', label: 'Last collection error', type: 'string' }
+];
 
 @Component({
 	selector: 'app-device-property',
@@ -85,6 +99,7 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 	redisOptions = new RedisOptions();
 	writeArgsTooltip = '';
 	result = '';
+	t2mSites: any[] = [];
 	private subscriptionDeviceProperty: Subscription;
 	private subscriptionHostInterfaces: Subscription;
 	private subscriptionDeviceWebApiRequest: Subscription;
@@ -167,6 +182,14 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 					}
 					this.propertyError = '';
 				}
+			} else if (res.type === DeviceType.T2MAutomator) {
+				if (res.result) {
+					this.t2mSites = res.result.sites || res.result.Sites || [];
+					this.patchT2MSites();
+					this.propertyError = '';
+				} else if (res.error) {
+					this.propertyError = res.error;
+				}
 			}
 			this.propertyLoading = false;
 		});
@@ -206,6 +229,9 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 			this.redisOptions = (typeof opts === 'string')
 			  ? new RedisOptions()
 			  : (opts || new RedisOptions());
+		}
+		if (this.data.device.type === DeviceType.T2MAutomator) {
+			this.ensureT2MDefaults();
 		}
 		this.subscriptionHostInterfaces = this.hmiService.onHostInterfaces.subscribe(res => {
 			if (res.result) {
@@ -272,6 +298,15 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 		}, this.data.device.type);
 	}
 
+	onCheckT2M() {
+		this.propertyLoading = true;
+		this.propertyError = '';
+		this.hmiService.askDeviceProperty({
+			address: this.data.device.property.address,
+			apiToken: this.data.device.property.apiToken
+		}, this.data.device.type);
+	}
+
 	// onCheckBACnetDevice() {
 	// 	this.propertyLoading = true;
 	// 	this.hmiService.askDeviceProperty(this.data.device.property.address, this.data.device.type);
@@ -312,7 +347,90 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 			if (this.data.device.property.opeinfo === undefined) {
 				this.data.device.property.opeinfo = true;
 			}
+		} else if (this.data.device.type === DeviceType.T2MAutomator) {
+			this.ensureT2MDefaults();
 		}
+	}
+
+	addT2MMapping() {
+		this.ensureT2MDefaults();
+		this.data.device.property.mappings.push({
+			enabled: true,
+			site: '',
+			connections: [],
+			requiredTags: []
+		});
+	}
+
+	removeT2MMapping(index: number) {
+		this.data.device.property.mappings.splice(index, 1);
+	}
+
+	private patchT2MSites() {
+		this.ensureT2MDefaults();
+		this.t2mSites.filter(site => site.enabled !== false).forEach(site => {
+			this.ensureT2MTag({
+				address: `site.${this.t2mSafeName(site.name)}.online`,
+				name: `site_${this.t2mSafeName(site.name)}_online`,
+				label: `${site.name} online`,
+				type: 'boolean'
+			});
+			const exists = this.data.device.property.mappings.some(mapping =>
+				String(mapping.site || '').toLowerCase() === String(site.name || '').toLowerCase());
+			if (!exists) {
+				this.data.device.property.mappings.push({
+					enabled: true,
+					site: site.name,
+					connections: [],
+					requiredTags: []
+				});
+			}
+		});
+	}
+
+	private ensureT2MDefaults() {
+		const property = this.data.device.property;
+		this.data.device.tags = this.data.device.tags || {};
+		T2M_STATUS_TAGS.forEach(definition => this.ensureT2MTag(definition));
+		property.address = property.address || 'http://127.0.0.1:17831';
+		property.autoCycle = property.autoCycle !== false;
+		property.commandTimeoutSeconds = Number(property.commandTimeoutSeconds) || 120;
+		property.collectionTimeoutSeconds = Number(property.collectionTimeoutSeconds) || 90;
+		property.cycleDelaySeconds = Number(property.cycleDelaySeconds) || 300;
+		property.mappings = Array.isArray(property.mappings) ? property.mappings : [];
+		property.mappings.forEach(mapping => {
+			mapping.connections = Array.isArray(mapping.connections) ? mapping.connections : [];
+			mapping.requiredTags = Array.isArray(mapping.requiredTags) ? mapping.requiredTags : [];
+		});
+		if (!this.data.device.polling || this.data.device.polling < 3000) {
+			this.data.device.polling = 3000;
+		}
+	}
+
+	private ensureT2MTag(definition) {
+		const exists = Object.values(this.data.device.tags || {}).some((tag: any) =>
+			tag.address === definition.address);
+		if (exists) {
+			return;
+		}
+		const tag = new Tag(Utils.getGUID(TAG_PREFIX));
+		tag.address = definition.address;
+		tag.name = definition.name;
+		tag.label = definition.label;
+		tag.description = definition.label;
+		tag.type = definition.type;
+		this.data.device.tags[tag.id] = tag;
+	}
+
+	private t2mSafeName(value: string): string {
+		const text = String(value || '').trim().toLowerCase();
+		const slug = text.replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'site';
+		let hash = 2166136261;
+		for (let index = 0; index < text.length; index++) {
+			hash ^= text.charCodeAt(index);
+			hash = Math.imul(hash, 16777619);
+		}
+		return `${slug}_${(hash >>> 0).toString(16)}`;
 	}
 
 	isValid(device): boolean {

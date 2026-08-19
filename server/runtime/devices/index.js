@@ -118,6 +118,19 @@ function removeDevice(device) {
 function load() {
     var tempdevices = runtime.project.getDevices();
     var serverDevice = runtime.project.getServer();
+    const t2mManagedDevices = new Set();
+    Object.values(tempdevices).forEach((device) => {
+        if (device.type !== 'T2MAutomator' || !device.enabled) {
+            return;
+        }
+        const mappings = device.property && Array.isArray(device.property.mappings)
+            ? device.property.mappings : [];
+        mappings.forEach((mapping) => {
+            if (mapping.enabled !== false && Array.isArray(mapping.connections)) {
+                mapping.connections.forEach((name) => t2mManagedDevices.add(name));
+            }
+        });
+    });
     activeDevices = {};
     runtime.daqStorage.reset();
     if (serverDevice) {
@@ -128,7 +141,7 @@ function load() {
         if (serverDevice && id === FuxaServerId) {
             continue;
         }
-        if (tempdevices[id].enabled) {
+        if (tempdevices[id].enabled && !t2mManagedDevices.has(tempdevices[id].name)) {
             if(tempdevices[id].type == 'ModbusRTU'){
                 if(!(tempdevices[id].property.address in sharedDevices)){
                     sharedDevices[tempdevices[id].property.address] = [];
@@ -333,6 +346,38 @@ function enableDevice(deviceName, enable) {
     } catch (err) {
         console.error(err);
     }
+}
+
+/**
+ * Enable or disable a device only for the current runtime. The project model is
+ * intentionally left unchanged so a save/restart cannot persist a remote
+ * connection in the enabled state.
+ */
+async function setDeviceRuntimeEnabled(deviceName, enable) {
+    const configured = runtime.project.getDevice(deviceName);
+    if (!configured) {
+        throw new Error(`Device '${deviceName}' was not found`);
+    }
+    enable = (typeof enable === 'string') ? enable === 'true' : Boolean(enable);
+    const active = activeDevices[configured.id];
+    if (!enable) {
+        if (active) {
+            await active.stop();
+            delete activeDevices[configured.id];
+        }
+        runtime.logger.info(`devices.runtime-enable: '${deviceName} - false'`, true);
+        return true;
+    }
+    if (!active) {
+        const runtimeDevice = JSON.parse(JSON.stringify(configured));
+        runtimeDevice.enabled = true;
+        if (!devices.loadDevice(runtimeDevice)) {
+            throw new Error(`Device '${deviceName}' could not be loaded`);
+        }
+        activeDevices[configured.id].start();
+    }
+    runtime.logger.info(`devices.runtime-enable: '${deviceName} - true'`, true);
+    return true;
 }
 
 /**
@@ -566,6 +611,7 @@ var devices = module.exports = {
     getRequestResult: getRequestResult,
     getTagFormat: getTagFormat,
     enableDevice: enableDevice,
+    setDeviceRuntimeEnabled: setDeviceRuntimeEnabled,
     getDevice: getDevice,
     getTagId: getTagId,
     getTagDaqSettings: getTagDaqSettings,

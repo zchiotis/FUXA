@@ -20,6 +20,7 @@ var WebCamClient = require('./webcam');
 var MELSECclient = require('./melsec');
 var REDISclient = require('./redis');
 var KawasakiClient = require('./kawasaki');
+var T2MAutomatorClient = require('./t2mautomator');
 
 const path = require('path');
 const utils = require('../utils');
@@ -132,6 +133,11 @@ function Device(data, runtime) {
         }
         data.polling = Math.max(Number(data.polling) || 3000, 3000);
         comm = KawasakiClient.create(data, logger, events, manager, runtime);
+    } else if (data.type === DeviceEnum.T2MAutomator) {
+        if (!T2MAutomatorClient) {
+            return null;
+        }
+        comm = T2MAutomatorClient.create(data, logger, events, manager, runtime);
     }
     // else if (data.type === DeviceEnum.Template) {
     //     if (!TEMPLATEclient) {
@@ -336,6 +342,12 @@ function Device(data, runtime) {
                 }).catch(function (err) {
                     reject(err);
                 });
+            } else if (data.type === DeviceEnum.T2MAutomator) {
+                comm.browse(path, callback).then(function (result) {
+                    resolve(result);
+                }).catch(function (err) {
+                    reject(err);
+                });
             } else {
                 reject('Browse not supported!');
             }
@@ -511,6 +523,12 @@ function getSupportedProperty(endpoint, type, packagerManager) {
             }).catch(function (err) {
                 reject(err);
             });
+        } else if (type === DeviceEnum.T2MAutomator) {
+            T2MAutomatorClient.getSites(endpoint).then(function (result) {
+                resolve(result);
+            }).catch(function (err) {
+                reject(err);
+            });
         } else {
             reject('getSupportedProperty not supported!');
         }
@@ -570,6 +588,8 @@ function loadPlugin(type, module) {
         REDISclient = require(module);
     } else if (type === DeviceEnum.Kawasaki) {
         KawasakiClient = require(module);
+    } else if (type === DeviceEnum.T2MAutomator) {
+        T2MAutomatorClient = require(module);
     }
 }
 
@@ -614,6 +634,7 @@ var DeviceEnum = {
     MELSEC: 'MELSEC',
     REDIS: 'REDIS',
     Kawasaki: 'Kawasaki',
+    T2MAutomator: 'T2MAutomator',
     // Template: 'template'
 }
 

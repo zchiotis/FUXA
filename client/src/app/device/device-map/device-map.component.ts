@@ -144,6 +144,7 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
             this.plugins.push(DeviceType.WebAPI);
             this.plugins.push(DeviceType.MQTTclient);
             this.plugins.push(DeviceType.Kawasaki);
+            this.plugins.push(DeviceType.T2MAutomator);
             this.plugins.push(DeviceType.internal);
         } else {
             this.plugins.push(DeviceType.internal);
@@ -474,7 +475,23 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
             panelClass: 'dialog-property',
             data: {
                 device: tempdevice, remove: toremove, exist: exist, availableType: this.plugins,
-                projectService: this.projectService
+                projectService: this.projectService,
+                availableConnections: Object.values(this.devices)
+                    .filter((item: Device) => item.id !== device.id
+                        && item.type !== DeviceType.FuxaServer
+                        && item.type !== DeviceType.internal
+                        && item.type !== DeviceType.T2MAutomator)
+                    .map((item: Device) => ({ name: item.name, type: item.type })),
+                availableTags: Object.values(this.devices)
+                    .filter((item: Device) => item.id !== device.id
+                        && item.type !== DeviceType.FuxaServer
+                        && item.type !== DeviceType.internal
+                        && item.type !== DeviceType.T2MAutomator)
+                    .reduce((tags: any[], item: Device) => tags.concat(
+                        Object.values(item.tags || {}).map((tag: any) => ({
+                            id: tag.id,
+                            name: `${item.name} / ${tag.name}`
+                        }))), [])
             },
             position: { top: '60px' }
         });
@@ -524,6 +541,16 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
                             device.property.extendTimeoutMs = parseInt(tempdevice.property.extendTimeoutMs) || undefined;
                             device.property.opeinfo = tempdevice.property.opeinfo !== false;
                         }
+                        if (device.type === DeviceType.T2MAutomator) {
+                            device.polling = Math.max(Number(tempdevice.polling) || 3000, 3000);
+                            device.tags = tempdevice.tags || {};
+                            device.property.apiToken = tempdevice.property.apiToken || '';
+                            device.property.autoCycle = tempdevice.property.autoCycle !== false;
+                            device.property.commandTimeoutSeconds = Number(tempdevice.property.commandTimeoutSeconds) || 120;
+                            device.property.collectionTimeoutSeconds = Number(tempdevice.property.collectionTimeoutSeconds) || 90;
+                            device.property.cycleDelaySeconds = Number(tempdevice.property.cycleDelaySeconds) || 300;
+                            device.property.mappings = tempdevice.property.mappings || [];
+                        }
                         if (tempdevice.property.connectionOption) {
                             device.property.connectionOption = tempdevice.property.connectionOption;
                         }
@@ -553,12 +580,14 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
         return <Device[]>Object.values(this.devices).filter((d: Device) => d.type !== DeviceType.WebAPI
             && d.type !== DeviceType.FuxaServer
             && d.type !== DeviceType.ODBC
-            && d.type !== DeviceType.internal);
+            && d.type !== DeviceType.internal
+            && d.type !== DeviceType.T2MAutomator);
     }
 
     flows(): Device[] {
         return <Device[]>Object.values(this.devices).filter((d: Device) => d.type === DeviceType.WebAPI
             || d.type === DeviceType.ODBC
-            || d.type === DeviceType.internal);
+            || d.type === DeviceType.internal
+            || d.type === DeviceType.T2MAutomator);
     }
 }

@@ -449,6 +449,83 @@
                         <mat-slide-toggle color="primary" [(ngModel)]="data.device.property.opeinfo"></mat-slide-toggle>
                     </div>
                 </div>
+                <div *ngSwitchCase="deviceType.T2MAutomator">
+                    <div class="my-form-field block mb10">
+                        <span>Automator endpoint</span>
+                        <input [(ngModel)]="data.device.property.address"
+                            placeholder="http://127.0.0.1:17831" style="width: 350px" type="text"
+                            (click)="onAddressChanged()">
+                    </div>
+                    <div class="my-form-field block mb10">
+                        <span>API token</span>
+                        <input autocomplete="off" [(ngModel)]="data.device.property.apiToken"
+                            style="width: 350px" type="password">
+                        <button mat-icon-button matTooltip="Refresh eCatcher sites" (click)="onCheckT2M()"
+                            [disabled]="propertyLoading || !data.device.property.apiToken">
+                            <mat-icon>sync</mat-icon>
+                        </button>
+                        <mat-spinner *ngIf="propertyLoading" class="inbk" diameter="20"></mat-spinner>
+                    </div>
+                    <div *ngIf="propertyError" class="error mb10">{{propertyError}}</div>
+                    <div class="my-form-field inbk mb10 tac" style="width: 105px;">
+                        <span>Auto cycle</span>
+                        <mat-slide-toggle color="primary" [(ngModel)]="data.device.property.autoCycle"></mat-slide-toggle>
+                    </div>
+                    <div class="my-form-field inbk mb10 ml10">
+                        <span>Command timeout s</span>
+                        <input numberOnly [(ngModel)]="data.device.property.commandTimeoutSeconds"
+                            style="width: 75px" type="text">
+                    </div>
+                    <div class="my-form-field inbk mb10 ml10">
+                        <span>Collection timeout s</span>
+                        <input numberOnly [(ngModel)]="data.device.property.collectionTimeoutSeconds"
+                            style="width: 75px" type="text">
+                    </div>
+                    <div class="my-form-field inbk mb10 ml10">
+                        <span>Cycle delay s</span>
+                        <input numberOnly [(ngModel)]="data.device.property.cycleDelaySeconds"
+                            style="width: 75px" type="text">
+                    </div>
+
+                    <div class="t2m-mapping-header">
+                        <strong>Site mappings</strong>
+                        <button mat-icon-button matTooltip="Add mapping" (click)="addT2MMapping()">
+                            <mat-icon>add</mat-icon>
+                        </button>
+                    </div>
+                    <div class="t2m-mapping-row" *ngFor="let mapping of data.device.property.mappings; let idx = index">
+                        <mat-slide-toggle color="primary" [(ngModel)]="mapping.enabled"
+                            matTooltip="Include site in automatic collection"></mat-slide-toggle>
+                        <div class="my-form-field">
+                            <span>eCatcher site</span>
+                            <mat-select [(value)]="mapping.site" style="width: 190px">
+                                <mat-option *ngIf="mapping.site" [value]="mapping.site">{{mapping.site}}</mat-option>
+                                <mat-option *ngFor="let site of t2mSites" [value]="site.name">
+                                    {{site.name}} [{{site.status}}]
+                                </mat-option>
+                            </mat-select>
+                        </div>
+                        <div class="my-form-field">
+                            <span>FUXA connections</span>
+                            <mat-select multiple [(value)]="mapping.connections" style="width: 210px">
+                                <mat-option *ngFor="let connection of data.availableConnections" [value]="connection.name">
+                                    {{connection.name}}
+                                </mat-option>
+                            </mat-select>
+                        </div>
+                        <div class="my-form-field">
+                            <span>Required tags</span>
+                            <mat-select multiple [(value)]="mapping.requiredTags" style="width: 230px">
+                                <mat-option *ngFor="let tag of data.availableTags" [value]="tag.id">
+                                    {{tag.name}}
+                                </mat-option>
+                            </mat-select>
+                        </div>
+                        <button mat-icon-button color="warn" matTooltip="Remove mapping" (click)="removeT2MMapping(idx)">
+                            <mat-icon>delete</mat-icon>
+                        </button>
+                    </div>
+                </div>
                 <div *ngSwitchCase="deviceType.ODBC">
                     <div class="my-form-field block">
                         <span>{{'device.property-dsn' | translate}}</span>

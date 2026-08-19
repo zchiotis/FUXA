@@ -40,7 +40,7 @@ export class Device {
         id: 'Device id, GUID',
         name: 'Device name',
         enabled: 'Enabled',
-        type: 'Device Type: FuxaServer | SiemensS7 | OPCUA | BACnet | ModbusRTU | ModbusTCP | WebAPI | MQTTclient | internal | EthernetIP | ADSclient | Gpio | WebCam | MELSEC | REDIS | Kawasaki',
+        type: 'Device Type: FuxaServer | SiemensS7 | OPCUA | BACnet | ModbusRTU | ModbusTCP | WebAPI | MQTTclient | internal | EthernetIP | ADSclient | Gpio | WebCam | MELSEC | REDIS | Kawasaki | T2MAutomator',
         polling: 'Polling interval in millisec., check changed value after ask value, by OPCUA there is a monitor',
         property: 'Connection property depending of type',
         tags: 'Tags list of Tag',
@@ -206,6 +206,13 @@ export class DeviceNetProperty {
     timeoutMs?: number;
     extendTimeoutMs?: number;
     opeinfo?: boolean;
+    /** Talk2M Automator coordinator */
+    apiToken?: string;
+    autoCycle?: boolean;
+    commandTimeoutSeconds?: number;
+    collectionTimeoutSeconds?: number;
+    cycleDelaySeconds?: number;
+    mappings?: T2MSiteMapping[];
 
     static descriptor = {
         address: 'Device address (IP)',
@@ -259,8 +266,16 @@ export enum DeviceType {
     WebCam = 'WebCam',
     MELSEC = 'MELSEC',
     REDIS = 'REDIS',
-    Kawasaki = 'Kawasaki'
+    Kawasaki = 'Kawasaki',
+    T2MAutomator = 'T2MAutomator'
     // Template: 'template'
+}
+
+export interface T2MSiteMapping {
+    enabled: boolean;
+    site: string;
+    connections: string[];
+    requiredTags: string[];
 }
 
 export enum TagType {
