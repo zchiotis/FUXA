@@ -552,6 +552,7 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
                             device.property.cycleDelaySeconds = Number(tempdevice.property.cycleDelaySeconds) || 300;
                             device.property.failureDelaySeconds = Number(tempdevice.property.failureDelaySeconds) || 5;
                             device.property.mappings = tempdevice.property.mappings || [];
+                            device.property.statusSites = tempdevice.property.statusSites || [];
                         }
                         if (tempdevice.property.connectionOption) {
                             device.property.connectionOption = tempdevice.property.connectionOption;

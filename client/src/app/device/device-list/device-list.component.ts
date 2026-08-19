@@ -44,6 +44,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     tagsMap = {};
     deviceSelected: Device = null;
     isDeviceToEdit = true;
+    isManagedTagDevice = false;
     isWithOptions = true;
 
     @Input() readonly = false;
@@ -104,6 +105,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     setSelectedDevice(device: Device) {
         this.devices = this.projectService.getDevices();
         this.updateDeviceValue();
+        this.isManagedTagDevice = device?.type === DeviceType.T2MAutomator;
         if (!device) {
             return;
         }
@@ -138,6 +140,9 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     }
 
     onRemoveRow(row) {
+        if (this.isManagedTagDevice) {
+            return;
+        }
         const index = this.dataSource.data.indexOf(row, 0);
         if (this.dataSource.data[index]) {
             delete this.deviceSelected.tags[this.dataSource.data[index].id];
@@ -147,6 +152,9 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     }
 
     onRemoveAll() {
+        if (this.isManagedTagDevice) {
+            return;
+        }
         let msg = '';
         this.translateService.get('msg.tags-remove-all').subscribe((txt: string) => { msg = txt; });
         let dialogRef = this.dialog.open(ConfirmDialogComponent, {
@@ -203,6 +211,9 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     }
 
     onAddTag() {
+        if (this.isManagedTagDevice) {
+            return;
+        }
         if (this.deviceSelected.type === DeviceType.OPCUA || this.deviceSelected.type === DeviceType.BACnet || this.deviceSelected.type === DeviceType.WebAPI) {
             this.addOpcTags();
         } else if (this.deviceSelected.type === DeviceType.MQTTclient) {

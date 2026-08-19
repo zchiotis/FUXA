@@ -492,6 +492,24 @@
                             style="width: 75px" type="text">
                     </div>
 
+                    <div class="my-form-field block mb10">
+                        <span>Site status tags
+                            <button mat-icon-button matTooltip="Select all discovered sites"
+                                (click)="selectAllT2MStatusSites()">
+                                <mat-icon>done_all</mat-icon>
+                            </button>
+                            <button mat-icon-button matTooltip="Clear site status tags"
+                                (click)="clearT2MStatusSites()">
+                                <mat-icon>clear</mat-icon>
+                            </button>
+                        </span>
+                        <mat-select multiple [(value)]="data.device.property.statusSites" style="width: 420px">
+                            <mat-option *ngFor="let site of t2mSites" [value]="site.name">
+                                {{site.name}} [{{site.status}}]
+                            </mat-option>
+                        </mat-select>
+                    </div>
+
                     <div class="t2m-mapping-header">
                         <strong>Site mappings</strong>
                         <button mat-icon-button matTooltip="Add mapping" (click)="addT2MMapping()">
@@ -512,7 +530,8 @@
                         </div>
                         <div class="my-form-field">
                             <span>FUXA connections</span>
-                            <mat-select multiple [(value)]="mapping.connections" style="width: 210px">
+                            <mat-select multiple [(value)]="mapping.connections" style="width: 210px"
+                                (selectionChange)="onT2MConnectionsChanged(mapping, $event.value)">
                                 <mat-option *ngFor="let connection of data.availableConnections" [value]="connection.name">
                                     {{connection.name}}
                                 </mat-option>
@@ -525,8 +544,9 @@
                                     <mat-icon>done_all</mat-icon>
                                 </button>
                             </span>
-                            <mat-select multiple [(value)]="mapping.requiredTags" style="width: 230px">
-                                <mat-option *ngFor="let tag of data.availableTags" [value]="tag.id">
+                            <mat-select multiple [(value)]="mapping.requiredTags" style="width: 230px"
+                                [disabled]="!mapping.connections.length">
+                                <mat-option *ngFor="let tag of getT2MAvailableTags(mapping)" [value]="tag.id">
                                     {{tag.name}}
                                 </mat-option>
                             </mat-select>

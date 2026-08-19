@@ -22,7 +22,7 @@
                 <!-- Checkbox Column -->
                 <ng-container matColumnDef="select">
                     <mat-header-cell *matHeaderCellDef [ngClass]="'selectidthClass'">
-                        <button *ngIf="!readonly && isDeviceToEdit" mat-icon-button (click)="onAddTag()" class="remove" matTooltip="{{'device.list-add' | translate}}">
+                        <button *ngIf="!readonly && isDeviceToEdit && !isManagedTagDevice" mat-icon-button (click)="onAddTag()" class="remove" matTooltip="{{'device.list-add' | translate}}">
                             <mat-icon>add</mat-icon>
                         </button>
                     </mat-header-cell>
@@ -143,12 +143,12 @@
                 <!-- Button remove Column -->
                 <ng-container matColumnDef="remove">
                     <mat-header-cell *matHeaderCellDef>
-                        <button *ngIf="!readonly" mat-icon-button (click)="onRemoveAll()" class="remove" matTooltip="{{'device.list-remove-all' | translate}}">
+                        <button *ngIf="!readonly && !isManagedTagDevice" mat-icon-button (click)="onRemoveAll()" class="remove" matTooltip="{{'device.list-remove-all' | translate}}">
                             <mat-icon>clear</mat-icon>
                         </button>
                     </mat-header-cell>
                     <mat-cell *matCellDef="let element">
-                        <button *ngIf="!readonly" mat-icon-button (click)="$event.stopPropagation();onRemoveRow(element)" class="remove"
+                        <button *ngIf="!readonly && !isManagedTagDevice" mat-icon-button (click)="$event.stopPropagation();onRemoveRow(element)" class="remove"
                             matTooltip="{{'device.list-remove' | translate}}">
                             <mat-icon>clear</mat-icon>
                         </button>

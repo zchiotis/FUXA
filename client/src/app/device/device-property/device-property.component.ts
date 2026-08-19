@@ -269,6 +269,9 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 	}
 
 	onOkClick(): void {
+		if (this.data.device.type === DeviceType.T2MAutomator) {
+			this.syncT2MSiteTags();
+		}
 		this.data.security = this.getSecurity();
 		if (this.data.device.type === DeviceType.REDIS) {
 			this.data.device.property.options = this.redisOptions;
@@ -367,21 +370,39 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 	}
 
 	selectAllT2MTags(mapping) {
+		mapping.requiredTags = this.getT2MAvailableTags(mapping).map(tag => tag.id);
+	}
+
+	getT2MAvailableTags(mapping) {
 		const connections = new Set(mapping.connections || []);
-		mapping.requiredTags = (this.data.availableTags || [])
-			.filter(tag => !connections.size || connections.has(tag.deviceName))
-			.map(tag => tag.id);
+		if (!connections.size) {
+			return [];
+		}
+		return (this.data.availableTags || [])
+			.filter(tag => connections.has(tag.deviceName));
+	}
+
+	onT2MConnectionsChanged(mapping, connections) {
+		mapping.connections = Array.isArray(connections) ? connections : [];
+		const availableTagIds = new Set(this.getT2MAvailableTags(mapping).map(tag => tag.id));
+		mapping.requiredTags = (mapping.requiredTags || [])
+			.filter(tagId => availableTagIds.has(tagId));
+	}
+
+	selectAllT2MStatusSites() {
+		this.ensureT2MDefaults();
+		this.data.device.property.statusSites = Array.from(new Set(
+			this.t2mSites.map(site => site.name).filter(name => !!name)));
+	}
+
+	clearT2MStatusSites() {
+		this.ensureT2MDefaults();
+		this.data.device.property.statusSites = [];
 	}
 
 	private patchT2MSites() {
 		this.ensureT2MDefaults();
 		this.t2mSites.filter(site => site.enabled !== false).forEach(site => {
-			this.ensureT2MTag({
-				address: `site.${this.t2mSafeName(site.name)}.online`,
-				name: `site_${this.t2mSafeName(site.name)}_online`,
-				label: `${site.name} online`,
-				type: 'boolean'
-			});
 			const exists = this.data.device.property.mappings.some(mapping =>
 				String(mapping.site || '').toLowerCase() === String(site.name || '').toLowerCase());
 			if (!exists) {
@@ -391,8 +412,12 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 					connections: [],
 					requiredTags: []
 				});
+				this.data.device.property.statusSites.push(site.name);
 			}
 		});
+		this.data.device.property.statusSites = Array.from(new Set(
+			this.data.device.property.statusSites.filter(name => !!name)));
+		this.syncT2MSiteTags();
 	}
 
 	private ensureT2MDefaults() {
@@ -410,9 +435,40 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 			mapping.connections = Array.isArray(mapping.connections) ? mapping.connections : [];
 			mapping.requiredTags = Array.isArray(mapping.requiredTags) ? mapping.requiredTags : [];
 		});
+		if (!Array.isArray(property.statusSites)) {
+			property.statusSites = Array.from(new Set(property.mappings
+				.map(mapping => mapping.site)
+				.filter(site => !!site)));
+		}
 		if (!this.data.device.polling || this.data.device.polling < 3000) {
 			this.data.device.polling = 3000;
 		}
+	}
+
+	private syncT2MSiteTags() {
+		this.ensureT2MDefaults();
+		const selectedSites: string[] = Array.from(new Set<string>(
+			this.data.device.property.statusSites
+				.map(name => String(name || '').trim())
+				.filter(name => !!name)));
+		const selectedAddresses = new Set(selectedSites.map(name =>
+			`site.${this.t2mSafeName(name)}.online`));
+
+		Object.keys(this.data.device.tags || {}).forEach(id => {
+			const address = String(this.data.device.tags[id]?.address || '');
+			if (address.startsWith('site.') && address.endsWith('.online')
+				&& !selectedAddresses.has(address)) {
+				delete this.data.device.tags[id];
+			}
+		});
+
+		selectedSites.forEach(name => this.ensureT2MTag({
+			address: `site.${this.t2mSafeName(name)}.online`,
+			name: `site_${this.t2mSafeName(name)}_online`,
+			label: `${name} online`,
+			type: 'boolean'
+		}));
+		this.data.device.property.statusSites = selectedSites;
 	}
 
 	private ensureT2MTag(definition) {

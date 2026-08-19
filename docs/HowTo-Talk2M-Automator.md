@@ -10,8 +10,14 @@ Talk2M Automator and eCatcher. The API is available only on the local computer.
 3. Copy the API token shown by the Automator.
 4. In FUXA, add a `T2MAutomator` connection and enter the token.
 5. Select refresh to import the enabled eCatcher sites.
-6. For each site, select its FUXA device connections and the tags that must receive a fresh value.
+6. For each site, select its FUXA device connections and then select the required
+   tags. The tag list contains only tags from those selected connections.
 7. Enable the `T2MAutomator` connection and save the project.
+
+Site online tags are managed from the Talk2M Automator connection properties.
+Refresh the eCatcher site list, select the required entries under **Site status
+tags**, and save the connection. FUXA creates or removes the corresponding
+`site.<name>.online` tags while preserving the fixed coordinator status tags.
 
 Mapped FUXA connections are runtime-controlled. They do not need to be enabled
 in the project. At startup FUXA suppresses every mapped connection until the
