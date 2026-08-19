@@ -33,6 +33,12 @@ During collection the coordinator also reads every required tag directly from
 the active FUXA runtime value store. This fallback covers drivers whose values
 are visible to FUXA but do not emit a usable `device-value:changed` event.
 
+After a successful collection, FUXA preserves the last non-null values from the
+temporarily enabled connection before stopping it. The snapshot remains
+available to dashboards and reporting connections after the VPN disconnect,
+but a newly enabled runtime connection starts empty and must produce fresh
+values before the next cycle can succeed.
+
 Before changing or disconnecting the VPN, FUXA stops all mapped device
 connections. If any connection cannot be stopped, the VPN is left unchanged and
 `cycle.last_error` reports the failure.

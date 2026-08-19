@@ -7,6 +7,7 @@ var Device = require('./device');
 
 var sharedDevices = {};             // Shared Devices list
 var activeDevices = {};             // Actives Devices list
+var runtimeDeviceSnapshots = {};    // Last good values for temporarily managed devices
 var runtime;                        // Access to application resource like logger/settings
 var wokingStatus;                   // Current status (start/stop) to know if is working
 
@@ -77,6 +78,7 @@ function update() {
  * @param {*} device
  */
 function updateDevice(device) {
+    delete runtimeDeviceSnapshots[device.id];
     if (!activeDevices[device.id]) {
         if (devices.loadDevice(device) && device.enabled) {
             activeDevices[device.id].start();
@@ -100,6 +102,7 @@ function updateDevice(device) {
  * @param {*} device
  */
 function removeDevice(device) {
+    delete runtimeDeviceSnapshots[device.id];
     if (!activeDevices[device.id]) {
         delete activeDevices[device.id];
     } else {
@@ -132,6 +135,7 @@ function load() {
         });
     });
     activeDevices = {};
+    runtimeDeviceSnapshots = {};
     runtime.daqStorage.reset();
     if (serverDevice) {
         devices.loadDevice(serverDevice);
@@ -208,6 +212,9 @@ function getDevicesStatus() {
  */
 function getDevicesValues() {
     var adev = {};
+    for (var snapshotId in runtimeDeviceSnapshots) {
+        adev[snapshotId] = runtimeDeviceSnapshots[snapshotId];
+    }
     for (var id in activeDevices) {
         adev[id] = activeDevices[id].getValues();
     }
@@ -226,6 +233,9 @@ function getDeviceValue(deviceid, sigid) {
     if (activeDevices[deviceid]) {
         return activeDevices[deviceid].getValue(sigid);
     }
+    if (runtimeDeviceSnapshots[deviceid]) {
+        return runtimeDeviceSnapshots[deviceid][sigid] || null;
+    }
     return null;
 }
 
@@ -242,6 +252,15 @@ function getDeviceValue(deviceid, sigid) {
             let result = activeDevices[deviceid].getValue(sigid);
             if (fully) {
                 return result;
+            } else if (result) {
+                return result.value;
+            }
+            return null;
+        }
+        if (runtimeDeviceSnapshots[deviceid]) {
+            let result = runtimeDeviceSnapshots[deviceid][sigid];
+            if (fully) {
+                return result || null;
             } else if (result) {
                 return result.value;
             }
@@ -362,8 +381,20 @@ async function setDeviceRuntimeEnabled(deviceName, enable) {
     const active = activeDevices[configured.id];
     if (!enable) {
         if (active) {
+            const captured = snapshotDeviceValues(active.getValues());
             await active.stop();
             delete activeDevices[configured.id];
+            if (Object.keys(captured).length) {
+                runtimeDeviceSnapshots[configured.id] = Object.assign(
+                    {}, runtimeDeviceSnapshots[configured.id] || {}, captured);
+            }
+        }
+        const snapshot = runtimeDeviceSnapshots[configured.id];
+        if (snapshot) {
+            runtime.events.emit('device-value:changed', {
+                id: configured.id,
+                values: snapshot
+            });
         }
         runtime.logger.info(`devices.runtime-enable: '${deviceName} - false'`, true);
         return true;
@@ -378,6 +409,18 @@ async function setDeviceRuntimeEnabled(deviceName, enable) {
     }
     runtime.logger.info(`devices.runtime-enable: '${deviceName} - true'`, true);
     return true;
+}
+
+function snapshotDeviceValues(values) {
+    const snapshot = {};
+    Object.entries(values || {}).forEach(([key, tag]) => {
+        if (!tag || tag.value === null || tag.value === undefined) {
+            return;
+        }
+        const id = String(tag.id || key);
+        snapshot[id] = Object.assign({}, tag, { id });
+    });
+    return snapshot;
 }
 
 /**
@@ -618,5 +661,6 @@ var devices = module.exports = {
     setTagDaqSettings: setTagDaqSettings,
     getDeviceProperty: getDeviceProperty,
     setDeviceProperty: setDeviceProperty,
-    getHistoricalTags: getHistoricalTags
+    getHistoricalTags: getHistoricalTags,
+    _test: { snapshotDeviceValues: snapshotDeviceValues }
 }
