@@ -21,6 +21,8 @@ export class Device {
     id: string;
     /** Device name */
     name: string;
+    /** Optional UI group used to organize connections */
+    group?: string;
     /** Enabled */
     enabled: boolean;
     /** Connection property, DeviceNetProperty */

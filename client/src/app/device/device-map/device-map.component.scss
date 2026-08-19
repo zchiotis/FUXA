@@ -15,6 +15,24 @@ $internal-backcolor: rgb(114, 120, 125);
         min-height: 0;
         overflow: hidden;
     }
+    .group-toolbar {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 50px;
+        padding: 5px 24px;
+        color: var(--formInputColor);
+        border-bottom: 1px solid var(--headerBorder);
+        background: var(--workPanelBackground);
+        box-sizing: border-box;
+    }
+    .map-view {
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+    }
     .container {
         flex: 1 1 auto;
         min-height: 0;
@@ -118,6 +136,17 @@ $internal-backcolor: rgb(114, 120, 125);
         padding-bottom: 7px;
         padding-top: 0px;
         min-height: 20px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .device-group-label {
+        display: block;
+        margin: -13px 28px 3px 8px;
+        font-size: 10px;
+        line-height: 14px;
+        opacity: 0.75;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -272,6 +301,10 @@ $internal-backcolor: rgb(114, 120, 125);
 
     .mat-column-name {
         flex: 1 1 160px;
+    }
+
+    .mat-column-group {
+        flex: 0 0 140px;
     }
 
     .mat-column-type {

@@ -39,6 +39,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     dataSource = new MatTableDataSource([]);
     selection = new SelectionModel<Element>(true, []);
     devices: Device[];
+    groupedDevices: Array<{label: string, devices: Device[]}> = [];
     deviceType = DeviceType;
     tableWidth = this.defAllRowWidth;
     tagsMap = {};
@@ -66,6 +67,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
 
     ngOnInit() {
         this.devices = this.projectService.getDevices();
+        this.refreshGroupedDevices();
         if (!this.deviceSelected && this.devices) {
             this.deviceSelected = this.devices[0];
         }
@@ -78,6 +80,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
 
     mapTags() {
         this.devices = this.projectService.getDevices();
+        this.refreshGroupedDevices();
         Object.values(this.devices).forEach(d => {
             if (d.tags) {
                 Object.values(d.tags).forEach((t: Tag) => {
@@ -104,6 +107,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
 
     setSelectedDevice(device: Device) {
         this.devices = this.projectService.getDevices();
+        this.refreshGroupedDevices();
         this.updateDeviceValue();
         this.isManagedTagDevice = device?.type === DeviceType.T2MAutomator;
         if (!device) {
@@ -428,7 +432,45 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     }
 
     devicesValue(): Array<Device> {
-        return Object.values(this.devices);
+        return this.groupedDevices.reduce((devices, group) => devices.concat(group.devices), []);
+    }
+
+    private refreshGroupedDevices() {
+        const groups = new Map<string, {label: string, devices: Device[]}>();
+        Object.values(this.devices || {}).forEach((device: Device) => {
+            const deviceGroup = String(device.group || '').trim();
+            const key = device.type === DeviceType.FuxaServer
+                ? '@@system'
+                : deviceGroup ? `group:${deviceGroup}` : '@@ungrouped';
+            const label = key === '@@system' ? 'System'
+                : key === '@@ungrouped' ? 'Ungrouped' : deviceGroup;
+            if (!groups.has(key)) {
+                groups.set(key, {label, devices: []});
+            }
+            groups.get(key).devices.push(device);
+        });
+        this.groupedDevices = Array.from(groups.entries())
+            .map(([key, group]) => ({
+                key,
+                label: group.label,
+                devices: group.devices.sort((a, b) => a.name.localeCompare(b.name))
+            }))
+            .sort((a, b) => {
+                if (a.key === '@@system') {
+                    return -1;
+                }
+                if (b.key === '@@system') {
+                    return 1;
+                }
+                if (a.key === '@@ungrouped') {
+                    return 1;
+                }
+                if (b.key === '@@ungrouped') {
+                    return -1;
+                }
+                return a.label.localeCompare(b.label);
+            })
+            .map(({label, devices}) => ({label, devices}));
     }
 
     /**

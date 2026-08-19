@@ -30,9 +30,14 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
     devicesViewList = DeviceViewModeType.list;
     deviceStatusType = DeviceConnectionStatusType;
 
-    displayedColumns = ['select', 'name', 'type', 'polling', 'address', 'status', 'enabled', 'remove'];
+    displayedColumns = ['select', 'name', 'group', 'type', 'polling', 'address', 'status', 'enabled', 'remove'];
     dataSource = new MatTableDataSource([]);
-    tableWidth = 1200;
+    tableWidth = 1340;
+
+    readonly allGroups = '@@all';
+    readonly ungrouped = '@@ungrouped';
+    selectedGroup = localStorage.getItem('@frango.connectiongroup') || this.allGroups;
+    groupOptions: Array<{key: string, label: string, count: number}> = [];
 
     @ViewChild(MatTable, {static: false}) table: MatTable<any>;
     @ViewChild(MatSort, {static: false}) sort: MatSort;
@@ -94,6 +99,8 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
         }
 
         this.dataSource.paginator = this.paginator;
+        this.dataSource.sortingDataAccessor = (device: Device, property: string) =>
+            property === 'group' ? this.getDeviceGroupLabel(device) : device[property];
         this.dataSource.sort = this.sort;
     }
 
@@ -126,7 +133,8 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
 
     loadDevices() {
         this.devices = this.projectService.checkSystemTags();
-        this.dataSource.data = Object.values(this.devices);
+        this.updateGroupOptions();
+        this.updateVisibleDevices();
     }
 
     loadAvailableType() {
@@ -156,7 +164,78 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
         device.property = new DeviceNetProperty();
         device.enabled = false;
         device.tags = {};
+        if (this.selectedGroup !== this.allGroups && this.selectedGroup !== this.ungrouped) {
+            device.group = this.selectedGroup;
+        }
         this.editDevice(device, false);
+    }
+
+    onGroupChange(group: string) {
+        this.selectedGroup = group || this.allGroups;
+        localStorage.setItem('@frango.connectiongroup', this.selectedGroup);
+        this.updateVisibleDevices();
+        if (this.paginator) {
+            this.paginator.firstPage();
+        }
+    }
+
+    getDeviceGroupLabel(device: Device): string {
+        if (device?.type === DeviceType.FuxaServer) {
+            return 'System';
+        }
+        return this.normalizeGroup(device?.group) || 'Ungrouped';
+    }
+
+    private normalizeGroup(group: string): string {
+        return String(group || '').trim();
+    }
+
+    private matchesSelectedGroup(device: Device): boolean {
+        if (this.selectedGroup === this.allGroups) {
+            return true;
+        }
+        const group = this.normalizeGroup(device?.group);
+        return this.selectedGroup === this.ungrouped ? !group : group === this.selectedGroup;
+    }
+
+    private updateGroupOptions() {
+        const counts = new Map<string, number>();
+        Object.values(this.devices || {}).forEach((device: Device) => {
+            if (device.type === DeviceType.FuxaServer) {
+                return;
+            }
+            const group = this.normalizeGroup(device.group) || this.ungrouped;
+            counts.set(group, (counts.get(group) || 0) + 1);
+        });
+        this.groupOptions = Array.from(counts.entries())
+            .map(([key, count]) => ({
+                key,
+                label: key === this.ungrouped ? 'Ungrouped' : key,
+                count
+            }))
+            .sort((a, b) => {
+                if (a.key === this.ungrouped) {
+                    return 1;
+                }
+                if (b.key === this.ungrouped) {
+                    return -1;
+                }
+                return a.label.localeCompare(b.label);
+            });
+        if (this.selectedGroup !== this.allGroups
+            && !this.groupOptions.some(option => option.key === this.selectedGroup)) {
+            this.selectedGroup = this.allGroups;
+            localStorage.setItem('@frango.connectiongroup', this.selectedGroup);
+        }
+    }
+
+    private updateVisibleDevices() {
+        this.dataSource.data = (<Device[]>Object.values(this.devices || {}))
+            .filter(device => device.type === DeviceType.FuxaServer || this.matchesSelectedGroup(device))
+            .sort((a, b) => {
+                const groupCompare = this.getDeviceGroupLabel(a).localeCompare(this.getDeviceGroupLabel(b));
+                return groupCompare || a.name.localeCompare(b.name);
+            });
     }
 
     onRemoveDevice(device: Device) {
@@ -351,16 +430,21 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
             if (type === 'flow') {
                 if (this.flows().length) {
                     let result: Device[] = this.flows();
-                    return result.sort((a, b) => (a.name > b.name) ? 1 : -1);
+                    return result.sort((a, b) => this.compareDevicesByGroup(a, b));
                 }
             } else {
                 if (this.plcs().length) {
                     let result: Device[] = this.plcs();
-                    return result.sort((a, b) => (a.name > b.name) ? 1 : -1);
+                    return result.sort((a, b) => this.compareDevicesByGroup(a, b));
                 }
             }
         }
         return [];
+    }
+
+    private compareDevicesByGroup(a: Device, b: Device): number {
+        const groupCompare = this.getDeviceGroupLabel(a).localeCompare(this.getDeviceGroupLabel(b));
+        return groupCompare || a.name.localeCompare(b.name);
     }
 
     onListDevice(device: Device) {
@@ -476,6 +560,9 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
             data: {
                 device: tempdevice, remove: toremove, exist: exist, availableType: this.plugins,
                 projectService: this.projectService,
+                availableGroups: this.groupOptions
+                    .filter(option => option.key !== this.ungrouped)
+                    .map(option => option.label),
                 availableConnections: Object.values(this.devices)
                     .filter((item: Device) => item.id !== device.id
                         && item.type !== DeviceType.FuxaServer
@@ -506,6 +593,7 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
                 } else {
                     let olddevice = JSON.parse(JSON.stringify(device));
                     device.name = tempdevice.name;
+                    device.group = this.normalizeGroup(tempdevice.group);
                     device.type = tempdevice.type;
                     device.enabled = tempdevice.enabled;
                     device.polling = tempdevice.polling;
@@ -584,13 +672,15 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
             && d.type !== DeviceType.FuxaServer
             && d.type !== DeviceType.ODBC
             && d.type !== DeviceType.internal
-            && d.type !== DeviceType.T2MAutomator);
+            && d.type !== DeviceType.T2MAutomator
+            && this.matchesSelectedGroup(d));
     }
 
     flows(): Device[] {
         return <Device[]>Object.values(this.devices).filter((d: Device) => d.type === DeviceType.WebAPI
             || d.type === DeviceType.ODBC
             || d.type === DeviceType.internal
-            || d.type === DeviceType.T2MAutomator);
+            || d.type === DeviceType.T2MAutomator)
+            .filter((d: Device) => this.matchesSelectedGroup(d));
     }
 }

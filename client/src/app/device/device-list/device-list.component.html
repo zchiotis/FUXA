@@ -6,9 +6,11 @@
         <div class="my-form-field" style="padding-right: 10px;">
             <span>{{'device.list-device' | translate}}</span>
             <mat-select [(value)]="deviceSelected" style="width: 300px" (selectionChange)="onDeviceChange($event.source)">
-                <mat-option *ngFor="let device of devicesValue()" [value]="device">
-                    {{ device.name }}
-                </mat-option>
+                <mat-optgroup *ngFor="let group of groupedDevices" [label]="group.label">
+                    <mat-option *ngFor="let device of group.devices" [value]="device">
+                        {{ device.name }}
+                    </mat-option>
+                </mat-optgroup>
             </mat-select>
         </div>
         <div class="my-form-field" style="padding-right: 10px;">

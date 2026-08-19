@@ -3,6 +3,15 @@ To add your Device and Tags going to **Connections** in editor.
 
 ![](images/setup-connections.png)
 
+## Connection groups
+
+Connections can be organized into named groups from the connection properties.
+Enter an existing group or type a new group name when editing a connection. The
+group selector above the connections map and list limits both views to one group,
+while **All groups** keeps every connection visible and sorts the list by group.
+Connections without a group remain available under **Ungrouped**. The connection
+selector on the tags page uses the same groups.
+
 Add and connect a **OPCUA** device.
 ![](images/fuxa-device.gif)
 
@@ -37,4 +46,3 @@ Here is the read script which returns the array element
 Here is the write script returning the actual tag value
 
 ![image](https://github.com/user-attachments/assets/51cfad3f-9354-45e5-a0a5-206507d1ca93)
- 

@@ -1,5 +1,18 @@
 <div class="page-container">
-    <div *ngIf="mode === devicesViewMap">
+    <div class="group-toolbar">
+        <mat-icon>folder_open</mat-icon>
+        <div class="my-form-field">
+            <span>Connection group</span>
+            <mat-select [(value)]="selectedGroup" (selectionChange)="onGroupChange($event.value)"
+                style="width: 240px">
+                <mat-option [value]="allGroups">All groups</mat-option>
+                <mat-option *ngFor="let group of groupOptions" [value]="group.key">
+                    {{group.label}} ({{group.count}})
+                </mat-option>
+            </mat-select>
+        </div>
+    </div>
+    <div *ngIf="mode === devicesViewMap" class="map-view">
         <div class="map-container">
             <div *ngIf="server && server.property">
                 <div class="main-line-flow" [style.left.px]="getMainLineLeftPosition()" [style.top.px]="getMainLineTopPosition('flow')" [style.width.px]="lineFlowSize"
@@ -36,6 +49,7 @@
                 <div *ngFor="let flow of devicesValue('flow'); index as i" class="node-flow" [style.color]="(flow.enabled) ? '#000000' : '#828282'"
                     [style.left.px]="getDeviceLeftPosition(i, 'flow')" [style.top.px]="getDeviceTopPosition('flow')" [style.width.px]="flowWidth" [style.height.px]="flowHeight"
                     [style.borderWidth.px]="flowBorder">
+                    <span class="device-group-label">{{ getDeviceGroupLabel(flow) }}</span>
                     <span class="device-header" style="color: black;">{{ flow.name }}</span>
                     <span class="device-pro" *ngIf="flow.property">{{ flow.property.address }}</span>
                     <span class="device-pro" style="padding-bottom: 10px;">{{ getDevicePropertyToShow(flow) }}</span>
@@ -56,6 +70,7 @@
                 <div *ngFor="let device of devicesValue(); index as i" [ngClass]="getNodeClass(device)" [style.color]="(device.enabled) ? '#FFFFFF' : '#C5C5C5'"
                     [style.left.px]="getDeviceLeftPosition(i)" [style.top.px]="getDeviceTopPosition()" [style.width.px]="deviceWidth" [style.height.px]="deviceHeight"
                     [style.borderWidth.px]="deviceBorder">
+                    <span class="device-group-label">{{ getDeviceGroupLabel(device) }}</span>
                     <span class="device-header">{{ device.name }}</span>
                     <span class="device-pro" *ngIf="device.property">{{ device.property.address }}</span>
                     <span class="device-pro" style="padding-bottom: 10px;">{{ getDevicePropertyToShow(device) }}</span>
@@ -98,6 +113,11 @@
             <ng-container matColumnDef="name">
                 <mat-header-cell *matHeaderCellDef mat-sort-header> {{'devices.list-name' | translate}} </mat-header-cell>
                 <mat-cell *matCellDef="let element">{{element.name}} </mat-cell>
+            </ng-container>
+            <!-- Group Column -->
+            <ng-container matColumnDef="group">
+                <mat-header-cell *matHeaderCellDef mat-sort-header> Group </mat-header-cell>
+                <mat-cell *matCellDef="let element">{{getDeviceGroupLabel(element)}} </mat-cell>
             </ng-container>
             <!-- Type Column -->
             <ng-container matColumnDef="type">
