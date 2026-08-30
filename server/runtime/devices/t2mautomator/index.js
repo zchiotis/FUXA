@@ -26,6 +26,7 @@ const TAG_DEFINITIONS = [
     { address: 'cycle.updated_tags', name: 'cycle_updated_tags', label: 'Fresh tags', type: 'number' },
     { address: 'cycle.last_success_at', name: 'cycle_last_success_at', label: 'Last success timestamp', type: 'number' },
     { address: 'cycle.last_error', name: 'cycle_last_error', label: 'Last collection error', type: 'string' },
+    { address: 'next_acquisition_ts', name: 'next_acquisition_ts', label: 'Next acquisition timestamp', type: 'number' },
 ];
 
 function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
@@ -110,9 +111,12 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
                         .catch((err) => logger.error(`'${data.name}' cycle failed: ${message(err)}`))
                         .finally(() => {
                             cyclePromise = null;
-                            nextCycleAt = Date.now() + (cycleSucceeded
+                            const nextDelayMs = cycleSucceeded
                                 ? cycleDelayMs()
-                                : failureDelayMs());
+                                : failureDelayMs();
+                            nextCycleAt = calculateNextAcquisitionTimestamp(Date.now(), nextDelayMs);
+                            setValue('next_acquisition_ts', nextCycleAt);
+                            emitValues();
                         });
                 }
             }
@@ -526,6 +530,10 @@ function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function calculateNextAcquisitionTimestamp(completedAt, delayMs) {
+    return Number(completedAt) + Number(delayMs);
+}
+
 async function waitUntil(predicate, timeoutMs, cancelled) {
     const started = Date.now();
     while (!predicate()) {
@@ -556,5 +564,5 @@ module.exports = {
     },
     getSites,
     TAG_DEFINITIONS,
-    _test: { collectFreshValues, normalizeList, parseTimestamp, readRuntimeTagValues, sameText, safeName, responseSites, waitUntil },
+    _test: { calculateNextAcquisitionTimestamp, collectFreshValues, normalizeList, parseTimestamp, readRuntimeTagValues, sameText, safeName, responseSites, waitUntil },
 };

@@ -29,6 +29,9 @@ A site cycle succeeds only after every required tag has received a non-null
 value with a timestamp newer than the verified VPN connection. FUXA then emits
 the `t2m-cycle:ready` runtime event and updates the automatically created cycle
 tags. These tags can be selected by an MQTT or ThingsBoard reporting connection.
+After each cycle finishes, `next_acquisition_ts` is updated once with the Unix
+timestamp in milliseconds of the next scheduled acquisition. Countdown widgets
+should calculate the remaining time client-side instead of publishing every second.
 
 Freshness is based on the time the coordinator receives a value event after the
 VPN connection. The original device timestamp is preserved as `sourceTimestamp`.

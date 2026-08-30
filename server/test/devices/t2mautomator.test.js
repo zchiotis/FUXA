@@ -31,6 +31,13 @@ describe('Talk2M Automator coordinator', function () {
         assert.ok(addresses.includes('ecatcher.connected_site'));
         assert.ok(addresses.includes('cycle.updated_tags'));
         assert.ok(addresses.includes('cycle.last_error'));
+        assert.ok(addresses.includes('next_acquisition_ts'));
+    });
+
+    it('calculates the next acquisition timestamp from the actual cycle completion time', function () {
+        assert.strictEqual(
+            _test.calculateNextAcquisitionTimestamp(1788104700000, 300000),
+            1788105000000);
     });
 
     it('accepts a fresh value when its id is only present as the values map key', function () {

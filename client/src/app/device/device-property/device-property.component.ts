@@ -20,7 +20,8 @@ const T2M_STATUS_TAGS = [
 	{ address: 'cycle.required_tags', name: 'cycle_required_tags', label: 'Required tags', type: 'number' },
 	{ address: 'cycle.updated_tags', name: 'cycle_updated_tags', label: 'Fresh tags', type: 'number' },
 	{ address: 'cycle.last_success_at', name: 'cycle_last_success_at', label: 'Last success timestamp', type: 'number' },
-	{ address: 'cycle.last_error', name: 'cycle_last_error', label: 'Last collection error', type: 'string' }
+	{ address: 'cycle.last_error', name: 'cycle_last_error', label: 'Last collection error', type: 'string' },
+	{ address: 'next_acquisition_ts', name: 'next_acquisition_ts', label: 'Next acquisition timestamp', type: 'number' }
 ];
 
 @Component({
