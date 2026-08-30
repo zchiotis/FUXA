@@ -92,7 +92,7 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
     };
 
     this.polling = async function () {
-        if (pollingBusy || stopping) {
+        if (pollingBusy || stopping || cyclePromise) {
             return;
         }
         pollingBusy = true;
