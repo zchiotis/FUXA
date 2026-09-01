@@ -629,6 +629,10 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
                             device.property.timeoutMs = parseInt(tempdevice.property.timeoutMs) || 10000;
                             device.property.extendTimeoutMs = parseInt(tempdevice.property.extendTimeoutMs) || undefined;
                             device.property.opeinfo = tempdevice.property.opeinfo !== false;
+                            device.property.errlog = tempdevice.property.errlog === true;
+                            device.property.errlogIntervalMs = parseInt(tempdevice.property.errlogIntervalMs) || 30000;
+                            device.property.errlogIgnoreCodes = tempdevice.property.errlogIgnoreCodes == null ?
+                                'E1326' : tempdevice.property.errlogIgnoreCodes;
                         }
                         if (device.type === DeviceType.T2MAutomator) {
                             device.polling = Math.max(Number(tempdevice.polling) || 3000, 3000);

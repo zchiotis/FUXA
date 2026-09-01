@@ -1,7 +1,7 @@
 /**
  * Kawasaki AS monitor telnet driver.
  *
- * Keeps one persistent telnet session open and polls STA/OPEINFO serially.
+ * Keeps one persistent telnet session open and polls STA/OPEINFO/ERRLOG serially.
  */
 
 'use strict';
@@ -16,6 +16,9 @@ const DEFAULT_READY_MARKER = '>';
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_READ_WINDOW_MS = 150;
 const DEFAULT_EXTEND_MS = 750;
+const DEFAULT_ERRLOG_INTERVAL_MS = 30000;
+const ERRLOG_SLOT_COUNT = 10;
+const DEFAULT_ERRLOG_IGNORE_CODES = 'E1326';
 const PAGE_MARKER = 'Press SPACE key to continue.';
 
 function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
@@ -36,6 +39,10 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     let addDaq = null;
     let latestSnapshot = {};
     let sessionMonitor = '';
+    let errlogWatermark = '';
+    let errlogSlots = Array(ERRLOG_SLOT_COUNT).fill(null);
+    let errlogNextSlot = 0;
+    let nextErrlogAt = 0;
 
     this.init = function () {};
 
@@ -103,6 +110,21 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
                 }
             }
 
+            if (!commandError && _isErrlogEnabled() && Date.now() >= nextErrlogAt) {
+                try {
+                    const errlogResult = await _runErrlogIncremental();
+                    if (errlogResult.firstFingerprint) {
+                        errlogWatermark = errlogResult.firstFingerprint;
+                    }
+                    _storeErrlogEntries(errlogResult.entries);
+                    _appendErrlogSlots(snapshot);
+                } catch (err) {
+                    commandError = err;
+                } finally {
+                    nextErrlogAt = Date.now() + _errlogIntervalMs();
+                }
+            }
+
             latestSnapshot = Object.assign({}, latestSnapshot, snapshot);
             const changed = await _updateVarsValue(snapshot);
             lastTimestampValue = Date.now();
@@ -131,6 +153,10 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         tagMap = {};
         latestSnapshot = {};
         sessionMonitor = '';
+        errlogWatermark = '';
+        errlogSlots = Array(ERRLOG_SLOT_COUNT).fill(null);
+        errlogNextSlot = 0;
+        nextErrlogAt = 0;
         data = JSON.parse(JSON.stringify(_data));
         data.polling = Math.max(Number(data.polling) || 3000, 3000);
         const tags = data.tags || {};
@@ -277,6 +303,94 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         throw new Error(`Timed out waiting for ${command} response`);
     }
 
+    async function _runErrlogIncremental() {
+        receiveBuffer = '';
+        _sendLine('errlog');
+
+        const previousWatermark = errlogWatermark;
+        const ignoredCodes = _errlogIgnoredCodes();
+        const entries = [];
+        let firstFingerprint = '';
+        let stopRequested = false;
+        let stopDeadline = 0;
+        let responseTail = '';
+        let idleDeadline = Date.now() + _timeoutMs();
+        const hardDeadline = Date.now() + Math.max(_timeoutMs() * 12, 120000);
+
+        const requestStop = () => {
+            if (!stopRequested) {
+                stopRequested = true;
+                stopDeadline = Date.now() + _timeoutMs();
+                _sendLine('');
+            }
+        };
+        const parser = createErrlogStreamParser((entry) => {
+            if (stopRequested) {
+                return;
+            }
+            const fingerprint = errlogFingerprint(entry);
+            if (!firstFingerprint) {
+                firstFingerprint = fingerprint;
+            }
+            if (previousWatermark && fingerprint === previousWatermark) {
+                requestStop();
+                return;
+            }
+            if (ignoredCodes.has(entry.code)) {
+                return;
+            }
+            entries.push(entry);
+            if (entries.length >= ERRLOG_SLOT_COUNT) {
+                requestStop();
+            }
+        });
+
+        while (Date.now() < hardDeadline) {
+            await _sleep(50);
+            if (receiveBuffer) {
+                const chunk = receiveBuffer;
+                receiveBuffer = '';
+                responseTail = `${responseTail}${chunk}`.slice(-4096);
+                parser.push(chunk);
+                idleDeadline = Date.now() + _timeoutMs();
+                if (!stopRequested && responseTail.indexOf(PAGE_MARKER) !== -1) {
+                    responseTail = responseTail.replace(PAGE_MARKER, '');
+                    _sendRaw(' ');
+                }
+            }
+            if (_hasFinalPrompt(responseTail, 'errlog')) {
+                parser.flush();
+                return { entries, firstFingerprint };
+            }
+            if (stopRequested && Date.now() > stopDeadline) {
+                throw new Error('Timed out waiting for ERRLOG to stop');
+            }
+            if (!stopRequested && Date.now() > idleDeadline) {
+                requestStop();
+            }
+        }
+        throw new Error('Timed out waiting for ERRLOG response');
+    }
+
+    function _storeErrlogEntries(entries) {
+        entries.slice().reverse().forEach((entry) => {
+            errlogSlots[errlogNextSlot] = entry;
+            errlogNextSlot = (errlogNextSlot + 1) % ERRLOG_SLOT_COUNT;
+        });
+    }
+
+    function _appendErrlogSlots(snapshot) {
+        errlogSlots.forEach((entry, index) => {
+            if (!entry) {
+                return;
+            }
+            const prefix = `errlog.slot_${String(index + 1).padStart(2, '0')}`;
+            snapshot[`${prefix}.timestamp_ms`] = entry.timestampMs;
+            snapshot[`${prefix}.code`] = entry.code;
+            snapshot[`${prefix}.message`] = entry.message;
+        });
+    }
+
     function _waitForPrompt() {
         return _waitForMarker(_readyMarker(), _timeoutMs());
     }
@@ -416,6 +530,22 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         return !(data.property && data.property.opeinfo === false);
     }
 
+    function _isErrlogEnabled() {
+        return !!(data.property && data.property.errlog);
+    }
+
+    function _errlogIntervalMs() {
+        return Math.max(Number(data.property && data.property.errlogIntervalMs) || DEFAULT_ERRLOG_INTERVAL_MS, 3000);
+    }
+
+    function _errlogIgnoredCodes() {
+        const configured = data.property && data.property.errlogIgnoreCodes;
+        return new Set(String(configured == null ? DEFAULT_ERRLOG_IGNORE_CODES : configured)
+            .split(/[\s,;]+/)
+            .map((code) => code.trim().toUpperCase())
+            .filter(Boolean));
+    }
+
     function _hasFinalPrompt(text, command) {
         const prompt = _readyMarker();
         const lines = String(text || '').replace(/\r/g, '\n').split('\n');
@@ -467,6 +597,92 @@ function parseMonitorName(responseText) {
     }
     const unquoted = text.match(/This\s+is\s+AS\s+monitor\s+terminal\s+([^\r\n]+)/i);
     return unquoted ? unquoted[1].trim() : '';
+}
+
+function parseErrlogHeader(line) {
+    const match = String(line || '').match(
+        /^\s*(\d+)\s+-\s+\[(\d{2}\/\d{2}\/\d{2}\s+\d{2}:\d{2}:\d{2})(?:\s+(.+?))?\]\s+\(([^)]+)\)\s*$/
+    );
+    if (!match) {
+        return null;
+    }
+    return {
+        displayIndex: Number(match[1]),
+        timestamp: match[2],
+        timestampMs: parseErrlogTimestampMs(match[2]),
+        mode: String(match[3] || '').trim(),
+        source: String(match[4] || '').trim()
+    };
+}
+
+function parseErrlogTimestampMs(value) {
+    const match = String(value || '').match(/^(\d{2})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
+    if (!match) {
+        return 0;
+    }
+    const date = new Date(
+        2000 + Number(match[1]),
+        Number(match[2]) - 1,
+        Number(match[3]),
+        Number(match[4]),
+        Number(match[5]),
+        Number(match[6])
+    );
+    return Number.isFinite(date.getTime()) ? date.getTime() : 0;
+}
+
+function createErrlogStreamParser(onEntry) {
+    let pending = '';
+    let header = null;
+
+    function processLine(rawLine) {
+        const line = String(rawLine || '').trim();
+        const parsedHeader = parseErrlogHeader(line);
+        if (parsedHeader) {
+            header = parsedHeader;
+            return;
+        }
+        if (!header) {
+            return;
+        }
+        const messageMatch = line.match(/^\(([A-Z]\d+)\)\s*(.*?)\s*$/i);
+        if (!messageMatch) {
+            return;
+        }
+        const entry = Object.assign({}, header, {
+            code: messageMatch[1].toUpperCase(),
+            message: messageMatch[2].trim()
+        });
+        header = null;
+        onEntry(entry);
+    }
+
+    return {
+        push(text) {
+            pending += String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            const lines = pending.split('\n');
+            pending = lines.pop();
+            lines.forEach(processLine);
+        },
+        flush() {
+            if (pending) {
+                processLine(pending);
+                pending = '';
+            }
+        }
+    };
+}
+
+function parseErrlogEntries(responseText) {
+    const entries = [];
+    const parser = createErrlogStreamParser((entry) => entries.push(entry));
+    parser.push(responseText);
+    parser.flush();
+    return entries;
+}
+
+function errlogFingerprint(entry) {
+    return [entry.timestamp, entry.mode, entry.source, entry.code, entry.message].join('|');
 }
 
 function parseScalar(value) {
@@ -718,6 +934,16 @@ const DEFAULT_TAGS = [
     { name: 'opeinfo_raw', label: 'OPEINFO raw', address: 'opeinfo.raw', type: 'string' }
 ];
 
+for (let slot = 1; slot <= ERRLOG_SLOT_COUNT; slot++) {
+    const slotName = String(slot).padStart(2, '0');
+    const prefix = `errlog.slot_${slotName}`;
+    DEFAULT_TAGS.push(
+        { name: `errlog_slot_${slotName}_timestamp_ms`, label: `ERRLOG slot ${slotName} timestamp`, address: `${prefix}.timestamp_ms`, type: 'number' },
+        { name: `errlog_slot_${slotName}_code`, label: `ERRLOG slot ${slotName} code`, address: `${prefix}.code`, type: 'string' },
+        { name: `errlog_slot_${slotName}_message`, label: `ERRLOG slot ${slotName} message`, address: `${prefix}.message`, type: 'string' }
+    );
+}
+
 for (let axis = 1; axis <= 8; axis++) {
     const prefix = `opeinfo.jt${axis}`;
     DEFAULT_TAGS.push(
@@ -737,5 +963,9 @@ module.exports = {
     parseSta,
     parseOpeinfo,
     parseMonitorName,
+    parseErrlogEntries,
+    parseErrlogTimestampMs,
+    createErrlogStreamParser,
+    errlogFingerprint,
     DEFAULT_TAGS
 };
