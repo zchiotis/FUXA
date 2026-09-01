@@ -312,6 +312,15 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 			if (this.data.device.property.opeinfo === undefined) {
 				this.data.device.property.opeinfo = true;
 			}
+			if (this.data.device.property.errlog === undefined) {
+				this.data.device.property.errlog = false;
+			}
+			if (!this.data.device.property.errlogIntervalMs) {
+				this.data.device.property.errlogIntervalMs = 30000;
+			}
+			if (this.data.device.property.errlogIgnoreCodes === undefined) {
+				this.data.device.property.errlogIgnoreCodes = 'E1326';
+			}
 		}
 	}
 
