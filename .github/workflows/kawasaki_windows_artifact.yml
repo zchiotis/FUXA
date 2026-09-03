@@ -1,10 +1,10 @@
-name: Build Kawasaki FUXA Windows Artifact
+name: Build Integrated FUXA Windows Artifact
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - agent/kawasaki-telnet-driver
+      - codex/t2m-fuxa-integration
 
 jobs:
   build-windows-headless:
@@ -63,7 +63,7 @@ jobs:
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FUXA-Kawasaki-Windows-x64
+          name: FUXA-Integrated-Windows-x64
           path: FUXA-headless-windows-x64.exe
           if-no-files-found: error
           retention-days: 30
