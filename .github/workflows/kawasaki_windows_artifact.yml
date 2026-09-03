@@ -1,0 +1,69 @@
+name: Build Kawasaki FUXA Windows Artifact
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/kawasaki-telnet-driver
+
+jobs:
+  build-windows-headless:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install server dependencies
+        working-directory: ./server
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install client dependencies
+        working-directory: ./client
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Build client
+        working-directory: ./client
+        run: npm run build -- --configuration=production
+
+      - name: Assemble headless package
+        shell: bash
+        run: |
+          mkdir -p fuxa-headless/server
+          mkdir -p fuxa-headless/client/dist
+          cp -r server/. fuxa-headless/server/
+          cp -r client/dist/. fuxa-headless/client/dist/
+          cp app/headless/headless-entry.js fuxa-headless/main.js
+          cat > fuxa-headless/package.json <<'EOF'
+          {
+            "name": "fuxa-headless",
+            "version": "1.0.0",
+            "bin": "main.js",
+            "pkg": {
+              "assets": [
+                "server/**/*",
+                "client/dist/**/*",
+                "_reports/**/*"
+              ],
+              "compression": "Brotli"
+            }
+          }
+          EOF
+
+      - name: Install packager
+        run: npm install --global @yao-pkg/pkg
+
+      - name: Build Windows executable
+        run: pkg fuxa-headless/package.json --targets node20-win-x64 --output FUXA-headless-windows-x64.exe
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FUXA-Kawasaki-Windows-x64
+          path: FUXA-headless-windows-x64.exe
+          if-no-files-found: error
+          retention-days: 30
