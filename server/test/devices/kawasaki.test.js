@@ -209,6 +209,51 @@ describe('Kawasaki telnet driver', function () {
         } finally { await device.stop(); await state.close(); }
     });
 
+    it('does not start a second connection while the first login is pending', async function () {
+        this.timeout(15000);
+        const state = createFakeKawasakiServer();
+        state.loginDelayMs = 250;
+        await state.listen();
+        const warnings = [];
+        const runtime = { logger: { info() {}, warn(message) { warnings.push(message); }, error() {} },
+            events: new EventEmitter(), plugins: { manager: {} }, project: { getDeviceProperty() {} } };
+        const device = require('../../runtime/devices/device').create({
+            id: 'slow-login', name: 'Slow login', type: 'Kawasaki', polling: 3000, runtimeAcquisitionOnce: true,
+            property: { address: '127.0.0.1', port: state.port(), timeoutMs: 2000,
+                opeinfo: false, errlog: false }, tags: {}
+        }, runtime);
+        try {
+            device.start();
+            for (let index = 0; index < 8; index++) device.checkStatus();
+            const deadline = Date.now() + 5000;
+            while (device.getComm().getAcquisitionStatus().state === 'pending' && Date.now() < deadline) await wait(50);
+            assert.strictEqual(device.getComm().getAcquisitionStatus().state, 'complete');
+            assert.strictEqual(state.connections, 1);
+            assert.strictEqual(warnings.some((message) => /overload/.test(message)), false);
+        } finally { await device.stop(); await state.close(); }
+    });
+
+    it('completes managed ERRLOG after requesting stop even without a returned prompt', async function () {
+        const state = createFakeKawasakiServer();
+        state.suppressErrlogStopPrompt = true;
+        await state.listen();
+        const data = { id: 'no-stop-prompt', name: 'No stop prompt', runtimeAcquisitionOnce: true,
+            property: { address: '127.0.0.1', port: state.port(), timeoutMs: 500,
+                opeinfo: false, errlog: true },
+            tags: Object.fromEntries(DEFAULT_TAGS.filter(tag => tag.address.startsWith('errlog.'))
+                .map((tag, i) => [String(i), { ...tag, id: String(i), daq: {} }])) };
+        const client = require('../../runtime/devices/kawasaki').create(data,
+            { info() {}, warn() {}, error() {} }, new EventEmitter(), null, {});
+        try {
+            client.load(data);
+            await client.connect();
+            await client.polling();
+            assert.strictEqual(client.getAcquisitionStatus().state, 'complete');
+            assert.strictEqual(state.errlogStops, 1);
+            assert.deepStrictEqual(state.commands, { sta: 1, opeinfo: 0, errlog: 1 });
+        } finally { await client.disconnect(); await state.close(); }
+    });
+
     it('does not publish a partial managed sample or retry after a command timeout', async function () {
         const state = createFakeKawasakiServer();
         state.dropOpeinfo = true;
@@ -265,6 +310,7 @@ function createFakeKawasakiServer(customRecords) {
         let loggedIn = false;
         let errlogRunning = false;
         socket.setEncoding('utf8');
+        socket.on('error', () => {});
         socket.write('Connecting to Kawasaki E Controller\r\n\r\nlogin: ');
         socket.on('data', (chunk) => {
             input += chunk;
@@ -274,7 +320,7 @@ function createFakeKawasakiServer(customRecords) {
                 const line = rawLine.trim().toLowerCase();
                 if (!loggedIn) {
                     loggedIn = true;
-                    socket.write('This is AS monitor terminal "webml2"\r\n>');
+                    setTimeout(() => socket.write('This is AS monitor terminal "webml2"\r\n>'), state.loginDelayMs || 0);
                     return;
                 }
                 if (line === 'sta') {
@@ -318,7 +364,7 @@ function createFakeKawasakiServer(customRecords) {
                         clearInterval(activeTimer);
                         activeTimer = null;
                     }
-                    socket.write('\r\n>');
+                    if (!state.suppressErrlogStopPrompt) socket.write('\r\n>');
                 }
             });
         });

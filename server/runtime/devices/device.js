@@ -46,6 +46,7 @@ function Device(data, runtime) {
     var pollingInterval = DEVICE_POLLING_INTERVAL;
     var sharedDevices = data.sharedDevices;
     var tryToConnect = 0;
+    var connecting = false;
     var comm;                                               // Interface to OPCUA/S7/.. Device
                                                             // required: connect, disconnect, isConnected, polling, init, load, getValue,
                                                             // getValues, getStatus, setValue, bindAddDaq, getTagProperty,
@@ -195,18 +196,30 @@ function Device(data, runtime) {
         if (comm.getAcquisitionStatus && ['complete', 'error'].includes(comm.getAcquisitionStatus().state)) {
             return;
         }
-        if (status === DeviceStatusEnum.INIT && currentCmd === DeviceCmdEnum.START) {
+        if (status === DeviceStatusEnum.INIT && currentCmd === DeviceCmdEnum.START && !connecting) {
             const self = this;
+            connecting = true;
             this.connect().then(() => {
+                if (currentCmd !== DeviceCmdEnum.START) {
+                    if (devicePolling) {
+                        clearInterval(devicePolling);
+                        devicePolling = null;
+                    }
+                    return self.disconnect();
+                }
                 tryToConnect = 0;
                 status = DeviceStatusEnum.IDLE;
                 self.restoreValues();
             }).catch(function (err) {
-                logger.error(`'${property.name}' connect error! ${err} (${tryToConnect})`);
-                if (tryToConnect++ > 3) {
-                    tryToConnect = 0;
-                    self.disconnect().then(() => {});
+                if (currentCmd === DeviceCmdEnum.START) {
+                    logger.error(`'${property.name}' connect error! ${err} (${tryToConnect})`);
+                    if (tryToConnect++ > 3) {
+                        tryToConnect = 0;
+                        self.disconnect().then(() => {});
+                    }
                 }
+            }).finally(function () {
+                connecting = false;
             });
         } else if (status === DeviceStatusEnum.IDLE && !comm.isConnected()) {
             status = DeviceStatusEnum.INIT;

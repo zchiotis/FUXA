@@ -368,15 +368,19 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         const entries = [];
         let firstFingerprint = '';
         let stopRequested = false;
+        let requestedAfterCompleteScan = false;
         let stopDeadline = 0;
+        let managedStopReadyAt = 0;
         let responseTail = '';
         let idleDeadline = Date.now() + _timeoutMs();
         const hardDeadline = Date.now() + Math.max(_timeoutMs() * 12, 120000);
 
-        const requestStop = () => {
+        const requestStop = (completeScan = false) => {
             if (!stopRequested) {
                 stopRequested = true;
+                requestedAfterCompleteScan = completeScan;
                 stopDeadline = Date.now() + _timeoutMs();
+                managedStopReadyAt = Date.now() + 250;
                 _sendLine('');
             }
         };
@@ -389,7 +393,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
                 firstFingerprint = fingerprint;
             }
             if (previousWatermark && fingerprint === previousWatermark) {
-                requestStop();
+                requestStop(true);
                 return;
             }
             if (ignoredCodes.has(entry.code)) {
@@ -397,7 +401,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
             }
             entries.push(entry);
             if (entries.length >= ERRLOG_SLOT_COUNT) {
-                requestStop();
+                requestStop(true);
             }
         });
 
@@ -415,6 +419,14 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
                 }
             }
             if (_hasFinalPrompt(responseTail, 'errlog')) {
+                parser.flush();
+                return { entries, firstFingerprint };
+            }
+            // ERRLOG is the final command of a managed VPN visit. Once enough
+            // history is collected, close the session instead of waiting for a
+            // prompt that some controllers do not send after Enter.
+            if (stopRequested && requestedAfterCompleteScan && data.runtimeAcquisitionOnce &&
+                    Date.now() >= managedStopReadyAt) {
                 parser.flush();
                 return { entries, firstFingerprint };
             }
