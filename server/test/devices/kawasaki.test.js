@@ -286,8 +286,9 @@ function wait(ms) {
 
 function createFakeKawasakiServer(customRecords) {
     let records = [makeRecord('E1326', 'Safety fence is open.', '21:57:32')];
-    for (let index = 1; index <= 12; index++) {
-        records.push(makeRecord(`E${1000 + index}`, `Actionable error ${index}.`, `20:${String(59 - index).padStart(2, '0')}:00`));
+    for (let index = 1; index <= 200; index++) {
+        const minute = String((59 - index + 60) % 60).padStart(2, '0');
+        records.push(makeRecord(`E${1000 + index}`, `Actionable error ${index}.`, `20:${minute}:00`));
     }
     if (customRecords) records = customRecords;
     let activeTimer = null;
