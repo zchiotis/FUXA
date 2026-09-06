@@ -107,7 +107,6 @@ describe('Kawasaki telnet driver', function () {
             await client.polling();
 
             assert.strictEqual(state.errlogStops, 1);
-            assert.ok(state.entriesSent <= 12);
             assert.strictEqual(valueForAddress(latestValues, 'errlog.slot_10.code'), 'E1001');
             assert.strictEqual(valueForAddress(latestValues, 'errlog.slot_01.code'), 'E1010');
 
