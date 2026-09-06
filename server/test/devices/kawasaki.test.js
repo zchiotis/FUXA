@@ -125,6 +125,110 @@ describe('Kawasaki telnet driver', function () {
             await state.close();
         }
     });
+
+    it('reads once per managed visit and preserves history across recreated devices', async function () {
+        this.timeout(15000);
+        const state = createFakeKawasakiServer();
+        await state.listen();
+        const runtime = {};
+        const logger = { info() {}, warn() {}, error() {} };
+        const data = {
+            id: 'managed-robot', name: 'Managed robot', runtimeAcquisitionOnce: true,
+            property: { address: '127.0.0.1', port: state.port(), loginCommand: 'webml',
+                timeoutMs: 2000, opeinfo: true, errlog: true },
+            tags: Object.fromEntries(DEFAULT_TAGS.map((tag, i) => [String(i), { ...tag, id: String(i), daq: {} }]))
+        };
+        let previous;
+        try {
+            for (let visit = 0; visit < 3; visit++) {
+                if (visit === 1) state.prependError('E1999', 'New actionable error.');
+                const client = require('../../runtime/devices/kawasaki').create(data, logger, new EventEmitter(), null, runtime);
+                try {
+                    client.load(data);
+                    await client.connect();
+                    await client.polling();
+                    assert.strictEqual(client.getAcquisitionStatus().state, 'complete');
+                    assert.strictEqual(client.isConnected(), false);
+                    for (let tick = 0; tick < 8; tick++) await client.polling();
+                    assert.deepStrictEqual(state.commands, { sta: visit + 1, opeinfo: visit + 1, errlog: visit + 1 });
+                    const values = client.getValues();
+                    if (visit === 0) {
+                        assert.strictEqual(valueForAddress(values, 'errlog.slot_10.code'), 'E1001');
+                    } else {
+                        assert.ok(state.lastEntriesSent < 6, 'must stop near the previous watermark');
+                        assert.strictEqual(valueForAddress(values, 'errlog.slot_01.code'), 'E1999');
+                        assert.strictEqual(valueForAddress(values, 'errlog.slot_02.code'), 'E1009');
+                    }
+                    const codes = Object.values(values).filter(tag => tag.tagref.address.endsWith('.code')).map(tag => tag.value);
+                    if (visit === 2) assert.deepStrictEqual(codes, previous, 'no-new-error visit must retain slots');
+                    previous = codes;
+                } finally { await client.disconnect(); }
+            }
+        } finally { await state.close(); }
+    });
+
+    it('completes an empty error log without inventing error entries', async function () {
+        const state = createFakeKawasakiServer([]);
+        await state.listen();
+        const data = { id: 'empty', name: 'Empty', runtimeAcquisitionOnce: true,
+            property: { address: '127.0.0.1', port: state.port(), opeinfo: false, errlog: true },
+            tags: Object.fromEntries(DEFAULT_TAGS.filter(tag => tag.address.startsWith('errlog.'))
+                .map((tag, i) => [String(i), { ...tag, id: String(i), daq: {} }])) };
+        const client = require('../../runtime/devices/kawasaki').create(data,
+            { info() {}, warn() {}, error() {} }, new EventEmitter(), null, {});
+        try {
+            client.load(data);
+            await client.connect();
+            await client.polling();
+            assert.strictEqual(client.getAcquisitionStatus().state, 'complete');
+            assert.strictEqual(Object.keys(client.getValues()).length, 30);
+            assert.strictEqual(valueForAddress(client.getValues(), 'errlog.slot_01.timestamp_ms'), 0);
+            assert.strictEqual(valueForAddress(client.getValues(), 'errlog.slot_10.code'), '');
+        } finally { await client.disconnect(); await state.close(); }
+    });
+
+    it('does not reconnect or poll a completed managed device from runtime timers', async function () {
+        this.timeout(15000);
+        const state = createFakeKawasakiServer();
+        await state.listen();
+        const runtime = { logger: { info() {}, warn() {}, error() {} }, events: new EventEmitter(),
+            plugins: { manager: {} }, project: { getDeviceProperty() {} } };
+        const device = require('../../runtime/devices/device').create({
+            id: 'wrapper', name: 'Wrapper', type: 'Kawasaki', polling: 3000, runtimeAcquisitionOnce: true,
+            property: { address: '127.0.0.1', port: state.port(), opeinfo: true, errlog: true }, tags: {}
+        }, runtime);
+        try {
+            device.start();
+            const deadline = Date.now() + 6000;
+            while (device.getComm().getAcquisitionStatus().state === 'pending' && Date.now() < deadline) await wait(50);
+            assert.strictEqual(device.getComm().getAcquisitionStatus().state, 'complete');
+            for (let i = 0; i < 8; i++) { device.checkStatus(); await device.polling(); }
+            await wait(3100);
+            assert.strictEqual(state.connections, 1);
+            assert.deepStrictEqual(state.commands, { sta: 1, opeinfo: 1, errlog: 1 });
+        } finally { await device.stop(); await state.close(); }
+    });
+
+    it('does not publish a partial managed sample or retry after a command timeout', async function () {
+        const state = createFakeKawasakiServer();
+        state.dropOpeinfo = true;
+        await state.listen();
+        const data = { id: 'failure', name: 'Failure', runtimeAcquisitionOnce: true,
+            property: { address: '127.0.0.1', port: state.port(), timeoutMs: 1000, opeinfo: true, errlog: true },
+            tags: { mode: { id: 'mode', address: 'sta.mode', type: 'string' } } };
+        const client = require('../../runtime/devices/kawasaki').create(data,
+            { info() {}, warn() {}, error() {} }, new EventEmitter(), null, {});
+        try {
+            client.load(data);
+            await client.connect();
+            await client.polling();
+            assert.strictEqual(client.getAcquisitionStatus().state, 'error');
+            assert.match(client.getAcquisitionStatus().error, /opeinfo/);
+            assert.deepStrictEqual(client.getValues(), {});
+            await client.polling();
+            assert.deepStrictEqual(state.commands, { sta: 1, opeinfo: 1, errlog: 0 });
+        } finally { await client.disconnect(); await state.close(); }
+    });
 });
 
 function valueForAddress(values, address) {
@@ -136,14 +240,17 @@ function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function createFakeKawasakiServer() {
+function createFakeKawasakiServer(customRecords) {
     let records = [makeRecord('E1326', 'Safety fence is open.', '21:57:32')];
     for (let index = 1; index <= 12; index++) {
         records.push(makeRecord(`E${1000 + index}`, `Actionable error ${index}.`, `20:${String(59 - index).padStart(2, '0')}:00`));
     }
+    if (customRecords) records = customRecords;
     let activeTimer = null;
     let serverPort = 0;
     const state = {
+        connections: 0,
+        commands: { sta: 0, opeinfo: 0, errlog: 0 },
         entriesSent: 0,
         lastEntriesSent: 0,
         errlogStops: 0,
@@ -153,6 +260,7 @@ function createFakeKawasakiServer() {
         port: () => serverPort
     };
     const server = net.createServer((socket) => {
+        state.connections++;
         let input = '';
         let loggedIn = false;
         let errlogRunning = false;
@@ -170,10 +278,18 @@ function createFakeKawasakiServer() {
                     return;
                 }
                 if (line === 'sta') {
+                    state.commands.sta++;
                     socket.write('sta\r\nRobot status:\r\nREPEAT mode\r\n\r\n>');
                     return;
                 }
+                if (line === 'opeinfo') {
+                    state.commands.opeinfo++;
+                    if (state.dropOpeinfo) return;
+                    socket.write('opeinfo\r\nOperation information\r\n>');
+                    return;
+                }
                 if (line === 'errlog') {
+                    state.commands.errlog++;
                     errlogRunning = true;
                     state.lastEntriesSent = 0;
                     let index = 0;

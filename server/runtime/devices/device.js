@@ -192,6 +192,9 @@ function Device(data, runtime) {
      * Check the Device connection, Reconnect
      */
     this.checkStatus = function () {
+        if (comm.getAcquisitionStatus && ['complete', 'error'].includes(comm.getAcquisitionStatus().state)) {
+            return;
+        }
         if (status === DeviceStatusEnum.INIT && currentCmd === DeviceCmdEnum.START) {
             const self = this;
             this.connect().then(() => {
@@ -230,8 +233,12 @@ function Device(data, runtime) {
     /**
      * Call Device to polling
      */
-    this.polling = function () {
-        comm.polling();
+    this.polling = async function () {
+        await comm.polling();
+        if (comm.getAcquisitionStatus && ['complete', 'error'].includes(comm.getAcquisitionStatus().state)) {
+            clearInterval(devicePolling);
+            devicePolling = null;
+        }
     }
 
     /**

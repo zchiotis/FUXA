@@ -402,6 +402,7 @@ async function setDeviceRuntimeEnabled(deviceName, enable) {
     if (!active) {
         const runtimeDevice = JSON.parse(JSON.stringify(configured));
         runtimeDevice.enabled = true;
+        runtimeDevice.runtimeAcquisitionOnce = runtimeDevice.type === 'Kawasaki';
         if (!devices.loadDevice(runtimeDevice)) {
             throw new Error(`Device '${deviceName}' could not be loaded`);
         }

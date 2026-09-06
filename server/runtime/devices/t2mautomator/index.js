@@ -46,7 +46,7 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
     let freshTagValues = new Map();
 
     const onDeviceValues = (event) => {
-        if (!cyclePromise || !event || !event.values) {
+        if (!cyclePromise || activeCycle.state !== 'collecting' || !event || !event.values) {
             return;
         }
         const receivedAt = Date.now();
@@ -256,7 +256,16 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
 
     async function waitForRequiredTags() {
         const started = Date.now();
-        while (freshTagValues.size < activeCycle.requiredTags) {
+        while (true) {
+            let pendingAcquisition = false;
+            for (const name of activeCycle.enabledDevices) {
+                const driver = runtime.devices.getDevice(name, true);
+                const status = driver && driver.getAcquisitionStatus && driver.getAcquisitionStatus();
+                if (status && status.state === 'error') {
+                    throw new Error(`'${name}' acquisition failed: ${status.error}`);
+                }
+                if (status && status.state === 'pending') pendingAcquisition = true;
+            }
             const receivedAt = Date.now();
             const runtimeValues = readRuntimeTagValues(
                 activeCycle.requiredTagIds,
@@ -265,6 +274,7 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
             if (stopping) {
                 throw new Error('Collection stopped');
             }
+            if (!pendingAcquisition && freshTagValues.size >= activeCycle.requiredTags) return;
             if (receivedAt - started > collectionTimeoutMs()) {
                 const missing = Array.from(activeCycle.requiredTagIds)
                     .filter((id) => !freshTagValues.has(id));
@@ -280,7 +290,8 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
             values,
             activeCycle.requiredTagIds,
             freshTagValues,
-            receivedAt);
+            receivedAt,
+            activeCycle.startedAt);
         if (freshTagValues.size > before) {
             activeCycle.updatedTags = freshTagValues.size;
             publishCycleTags();
@@ -428,7 +439,7 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
     }
 }
 
-function collectFreshValues(values, requiredTagIds, freshTagValues, receivedAt = Date.now()) {
+function collectFreshValues(values, requiredTagIds, freshTagValues, receivedAt = Date.now(), startedAt = 0) {
     let collected = false;
     Object.entries(values || {}).forEach(([key, tag]) => {
         if (!tag) {
@@ -438,11 +449,13 @@ function collectFreshValues(values, requiredTagIds, freshTagValues, receivedAt =
         if (!requiredTagIds.has(id) || tag.value === null || tag.value === undefined) {
             return;
         }
+        const sourceTimestamp = parseTimestamp(tag.timestamp ?? tag.ts);
+        if (startedAt && (sourceTimestamp === null || sourceTimestamp < startedAt)) return;
         freshTagValues.set(id, {
             id,
             value: tag.value,
             timestamp: receivedAt,
-            sourceTimestamp: parseTimestamp(tag.timestamp ?? tag.ts),
+            sourceTimestamp,
             quality: tag.quality,
         });
         collected = true;

@@ -33,8 +33,9 @@ After each cycle finishes, `next_acquisition_ts` is updated once with the Unix
 timestamp in milliseconds of the next scheduled acquisition. Countdown widgets
 should calculate the remaining time client-side instead of publishing every second.
 
-Freshness is based on the time the coordinator receives a value event after the
-VPN connection. The original device timestamp is preserved as `sourceTimestamp`.
+Freshness requires a device sample timestamp at or after the verified VPN
+connection. Cached values from earlier visits and values without timestamps
+cannot acknowledge the cycle. The device timestamp is preserved as `sourceTimestamp`.
 If the collection timeout expires, FUXA performs the same safe cleanup and moves
 to the next available site after the configured failure delay.
 
@@ -51,3 +52,34 @@ values before the next cycle can succeed.
 Before changing or disconnecting the VPN, FUXA stops all mapped device
 connections. If any connection cannot be stopped, the VPN is left unchanged and
 `cycle.last_error` reports the failure.
+
+## Kawasaki acquisitions over VPN
+
+T2M-managed Kawasaki connections acquire one complete sample per site visit:
+one STA, one OPEINFO when enabled, and one ERRLOG when enabled. Each robot closes
+its Telnet session after publishing that sample. Polling ticks and connection
+checks cannot restart a completed acquisition while other robots are collecting.
+The normal 3000 ms polling setting remains unchanged for direct, continuously
+running Kawasaki connections. A managed command failure fails the acquisition;
+it does not publish a partial sample as successful. The next site visit can retry.
+
+The coordinator waits for both required fresh tags and completion of every
+managed Kawasaki sample, including ERRLOG. Required tags that a controller does
+not supply still cause the collection timeout; select only applicable addresses.
+
+ERRLOG history and the latest fingerprint survive device recreation between VPN
+visits in the same FUXA process. They are isolated by device ID and endpoint/login/
+ignored-code configuration. Restarting FUXA clears this in-memory history and the
+next visit performs the initial history read again. A successful read with fewer
+than ten accepted errors exposes unused slots as timestamp_ms=0, code="", message="".
+Existing slots survive successful checks with no new errors.
+
+Each completed managed sample logs command counts and Telnet received/sent bytes,
+for example `acquisition complete: STA=1 OPEINFO=1 ERRLOG=1 rx=... tx=... bytes`.
+These counts exclude VPN, TCP and other application overhead. Filtering E1326
+discards received records; it cannot recover traffic already sent by the robot.
+The initial scan may still be large if the log contains mostly ignored errors.
+
+For Windows headless, replace the executable only after stopping the old FUXA
+process; retain the existing project/data directories. Use the integrated branch
+`codex/t2m-fuxa-integration` and artifact `FUXA-Integrated-Windows-x64`.

@@ -26,6 +26,10 @@ jobs:
         working-directory: ./client
         run: npm ci --prefer-offline --no-audit
 
+      - name: Test acquisition and runtime snapshots
+        working-directory: ./server
+        run: npx mocha test/devices/kawasaki.test.js test/devices/t2mautomator.test.js test/devices/runtimeSnapshots.test.js --timeout 20000
+
       - name: Build client
         working-directory: ./client
         run: npm run build -- --configuration=production

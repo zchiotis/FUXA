@@ -21,6 +21,9 @@ const ERRLOG_SLOT_COUNT = 10;
 const DEFAULT_ERRLOG_IGNORE_CODES = 'E1326';
 const PAGE_MARKER = 'Press SPACE key to continue.';
 
+// Device objects are recreated at each VPN visit; retain history for this FUXA runtime.
+const errlogRuntimeCaches = new WeakMap();
+
 function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     let data = JSON.parse(JSON.stringify(_data));
     const logger = _logger;
@@ -43,6 +46,32 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     let errlogSlots = Array(ERRLOG_SLOT_COUNT).fill(null);
     let errlogNextSlot = 0;
     let nextErrlogAt = 0;
+    let acquisitionState = 'pending';
+    let acquisitionError = '';
+    let traffic = { rx: 0, tx: 0, sta: 0, opeinfo: 0, errlog: 0 };
+
+    this.getAcquisitionStatus = () => ({
+        state: data.runtimeAcquisitionOnce ? acquisitionState : 'continuous',
+        error: acquisitionError
+    });
+
+    function historyCache() {
+        if (!runtime || typeof runtime !== 'object') return null;
+        if (!errlogRuntimeCaches.has(runtime)) errlogRuntimeCaches.set(runtime, new Map());
+        return errlogRuntimeCaches.get(runtime);
+    }
+
+    function historyIdentity() {
+        return JSON.stringify([_host(), _port(), _loginCommand(), Array.from(_errlogIgnoredCodes()).sort()]);
+    }
+
+    function saveHistory() {
+        const cache = historyCache();
+        if (cache) cache.set(data.id, {
+            identity: historyIdentity(), watermark: errlogWatermark,
+            slots: errlogSlots.map(entry => entry && { ...entry }), nextSlot: errlogNextSlot
+        });
+    }
 
     this.init = function () {};
 
@@ -81,6 +110,8 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     };
 
     this.polling = async function () {
+        if (data.runtimeAcquisitionOnce && acquisitionState !== 'pending') return;
+        if (data.runtimeAcquisitionOnce && working) return;
         if (!_checkWorking(true)) {
             _emitStatus('connect-busy');
             return;
@@ -118,6 +149,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
                     }
                     _storeErrlogEntries(errlogResult.entries);
                     _appendErrlogSlots(snapshot);
+                    saveHistory();
                 } catch (err) {
                     commandError = err;
                 } finally {
@@ -125,9 +157,17 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
                 }
             }
 
+            // A managed visit must not be acknowledged using a partial command result.
+            if (commandError && data.runtimeAcquisitionOnce) throw commandError;
             latestSnapshot = Object.assign({}, latestSnapshot, snapshot);
             const changed = await _updateVarsValue(snapshot);
             lastTimestampValue = Date.now();
+            if (data.runtimeAcquisitionOnce) {
+                await _closeSocket();
+                connected = false;
+                acquisitionState = 'complete';
+                logger.info(`'${data.name}' acquisition complete: STA=${traffic.sta} OPEINFO=${traffic.opeinfo} ERRLOG=${traffic.errlog} rx=${traffic.rx} tx=${traffic.tx} bytes (Telnet only)`, true);
+            }
             _emitValues(varsValue);
             if (addDaq && changed && !utils.isEmptyObject(changed)) {
                 addDaq(changed, data.name, data.id);
@@ -139,6 +179,10 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
                 _emitStatus('connect-ok');
             }
         } catch (err) {
+            if (data.runtimeAcquisitionOnce) {
+                acquisitionState = 'error';
+                acquisitionError = err && err.message ? err.message : String(err);
+            }
             logger.error(`'${data.name}' polling error: ${err && err.message ? err.message : err}`);
             connected = false;
             _emitStatus('connect-error');
@@ -158,6 +202,15 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         errlogNextSlot = 0;
         nextErrlogAt = 0;
         data = JSON.parse(JSON.stringify(_data));
+        acquisitionState = 'pending';
+        acquisitionError = '';
+        traffic = { rx: 0, tx: 0, sta: 0, opeinfo: 0, errlog: 0 };
+        const saved = historyCache()?.get(data.id);
+        if (saved && saved.identity === historyIdentity()) {
+            errlogWatermark = saved.watermark;
+            errlogSlots = saved.slots.map(entry => entry && { ...entry });
+            errlogNextSlot = saved.nextSlot;
+        }
         data.polling = Math.max(Number(data.polling) || 3000, 3000);
         const tags = data.tags || {};
         for (const id in tags) {
@@ -252,6 +305,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         socket.setEncoding('utf8');
         socket.setNoDelay(true);
         socket.on('data', (chunk) => {
+            traffic.rx += Buffer.byteLength(chunk, 'utf8');
             receiveBuffer += sanitizeTelnetText(chunk);
         });
         socket.on('close', () => {
@@ -277,6 +331,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     }
 
     async function _runCommand(command, options) {
+        traffic[command]++;
         receiveBuffer = '';
         _sendLine(command);
         const startedAt = Date.now();
@@ -304,6 +359,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     }
 
     async function _runErrlogIncremental() {
+        traffic.errlog++;
         receiveBuffer = '';
         _sendLine('errlog');
 
@@ -381,13 +437,10 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
 
     function _appendErrlogSlots(snapshot) {
         errlogSlots.forEach((entry, index) => {
-            if (!entry) {
-                return;
-            }
             const prefix = `errlog.slot_${String(index + 1).padStart(2, '0')}`;
-            snapshot[`${prefix}.timestamp_ms`] = entry.timestampMs;
-            snapshot[`${prefix}.code`] = entry.code;
-            snapshot[`${prefix}.message`] = entry.message;
+            snapshot[`${prefix}.timestamp_ms`] = entry ? entry.timestampMs : 0;
+            snapshot[`${prefix}.code`] = entry ? entry.code : '';
+            snapshot[`${prefix}.message`] = entry ? entry.message : '';
         });
     }
 
@@ -420,6 +473,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
 
     function _sendRaw(text) {
         if (socket) {
+            traffic.tx += Buffer.byteLength(text, 'utf8');
             socket.write(text, 'utf8');
         }
     }
