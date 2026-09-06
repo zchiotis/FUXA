@@ -640,7 +640,7 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
                             device.property.apiToken = tempdevice.property.apiToken || '';
                             device.property.autoCycle = tempdevice.property.autoCycle !== false;
                             device.property.commandTimeoutSeconds = Number(tempdevice.property.commandTimeoutSeconds) || 120;
-                            device.property.collectionTimeoutSeconds = Number(tempdevice.property.collectionTimeoutSeconds) || 90;
+                            device.property.collectionTimeoutSeconds = Number(tempdevice.property.collectionTimeoutSeconds) || 180;
                             device.property.cycleDelaySeconds = Number(tempdevice.property.cycleDelaySeconds) || 300;
                             device.property.failureDelaySeconds = Number(tempdevice.property.failureDelaySeconds) || 5;
                             device.property.mappings = tempdevice.property.mappings || [];

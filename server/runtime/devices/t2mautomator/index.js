@@ -12,6 +12,7 @@ const utils = require('../../utils');
 
 const DEFAULT_ENDPOINT = 'http://127.0.0.1:17831';
 const DEFAULT_TIMEOUT_SECONDS = 90;
+const DEFAULT_PENDING_ACQUISITION_TIMEOUT_SECONDS = 180;
 const DEFAULT_CYCLE_DELAY_SECONDS = 300;
 const DEFAULT_FAILURE_DELAY_SECONDS = 5;
 
@@ -275,7 +276,8 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
                 throw new Error('Collection stopped');
             }
             if (!pendingAcquisition && freshTagValues.size >= activeCycle.requiredTags) return;
-            if (receivedAt - started > collectionTimeoutMs()) {
+            const timeoutMs = effectiveCollectionTimeoutMs(collectionTimeoutMs(), pendingAcquisition);
+            if (receivedAt - started > timeoutMs) {
                 const missing = Array.from(activeCycle.requiredTagIds)
                     .filter((id) => !freshTagValues.has(id));
                 throw new Error(`Timed out waiting for ${missing.length} fresh required tags: ${missing.join(', ')}`);
@@ -547,6 +549,11 @@ function calculateNextAcquisitionTimestamp(completedAt, delayMs) {
     return Number(completedAt) + Number(delayMs);
 }
 
+function effectiveCollectionTimeoutMs(configuredTimeoutMs, pendingAcquisition) {
+    if (!pendingAcquisition) return configuredTimeoutMs;
+    return Math.max(configuredTimeoutMs, DEFAULT_PENDING_ACQUISITION_TIMEOUT_SECONDS * 1000);
+}
+
 async function waitUntil(predicate, timeoutMs, cancelled) {
     const started = Date.now();
     while (!predicate()) {
@@ -577,5 +584,5 @@ module.exports = {
     },
     getSites,
     TAG_DEFINITIONS,
-    _test: { calculateNextAcquisitionTimestamp, collectFreshValues, normalizeList, parseTimestamp, readRuntimeTagValues, sameText, safeName, responseSites, waitUntil },
+    _test: { calculateNextAcquisitionTimestamp, collectFreshValues, effectiveCollectionTimeoutMs, normalizeList, parseTimestamp, readRuntimeTagValues, sameText, safeName, responseSites, waitUntil },
 };

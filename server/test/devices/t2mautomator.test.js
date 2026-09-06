@@ -4,6 +4,12 @@ const assert = require('assert');
 const { TAG_DEFINITIONS, _test } = require('../../runtime/devices/t2mautomator');
 
 describe('Talk2M Automator coordinator', function () {
+    it('allows a pending managed acquisition to finish beyond the configured tag timeout', function () {
+        assert.strictEqual(_test.effectiveCollectionTimeoutMs(90000, true), 180000);
+        assert.strictEqual(_test.effectiveCollectionTimeoutMs(240000, true), 240000);
+        assert.strictEqual(_test.effectiveCollectionTimeoutMs(90000, false), 90000);
+    });
+
     it('waits for the complete robot acquisition even when required tags arrived earlier', async function () {
         const axios = require('axios');
         const EventEmitter = require('events');

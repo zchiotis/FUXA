@@ -253,6 +253,28 @@ describe('Kawasaki telnet driver', function () {
         } finally { await client.disconnect(); await state.close(); }
     });
 
+    it('cancels an active managed command without logging a later timeout', async function () {
+        const state = createFakeKawasakiServer();
+        state.hangErrlog = true;
+        await state.listen();
+        const errors = [];
+        const data = { id: 'cancelled', name: 'Cancelled', runtimeAcquisitionOnce: true,
+            property: { address: '127.0.0.1', port: state.port(), timeoutMs: 1000,
+                opeinfo: false, errlog: true }, tags: {} };
+        const client = require('../../runtime/devices/kawasaki').create(data,
+            { info() {}, warn() {}, error(message) { errors.push(message); } }, new EventEmitter(), null, {});
+        try {
+            client.load(data);
+            await client.connect();
+            const polling = client.polling();
+            const deadline = Date.now() + 2000;
+            while (!state.commands.errlog && Date.now() < deadline) await wait(20);
+            await client.disconnect();
+            await polling;
+            assert.deepStrictEqual(errors, []);
+        } finally { await client.disconnect(); await state.close(); }
+    });
+
     it('does not publish a partial managed sample or retry after a command timeout', async function () {
         const state = createFakeKawasakiServer();
         state.dropOpeinfo = true;
@@ -340,6 +362,7 @@ function createFakeKawasakiServer(customRecords) {
                     state.lastEntriesSent = 0;
                     let index = 0;
                     socket.write('errlog\r\n');
+                    if (state.hangErrlog) return;
                     activeTimer = setInterval(() => {
                         if (!errlogRunning || index >= records.length) {
                             clearInterval(activeTimer);

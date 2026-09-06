@@ -20,6 +20,7 @@ const DEFAULT_ERRLOG_INTERVAL_MS = 30000;
 const ERRLOG_SLOT_COUNT = 10;
 const DEFAULT_ERRLOG_IGNORE_CODES = 'E1326';
 const PAGE_MARKER = 'Press SPACE key to continue.';
+const ACQUISITION_CANCELLED = 'KAWASAKI_ACQUISITION_CANCELLED';
 
 // Device objects are recreated at each VPN visit; retain history for this FUXA runtime.
 const errlogRuntimeCaches = new WeakMap();
@@ -48,6 +49,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
     let nextErrlogAt = 0;
     let acquisitionState = 'pending';
     let acquisitionError = '';
+    let cancelled = false;
     let traffic = { rx: 0, tx: 0, sta: 0, opeinfo: 0, errlog: 0 };
 
     this.getAcquisitionStatus = () => ({
@@ -77,6 +79,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
 
     this.connect = function () {
         return new Promise(async (resolve, reject) => {
+            cancelled = false;
             if (!_checkWorking(true)) {
                 return reject(new Error('busy'));
             }
@@ -100,6 +103,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
 
     this.disconnect = function () {
         return new Promise(async (resolve) => {
+            cancelled = true;
             _checkWorking(false);
             await _closeSocket();
             connected = false;
@@ -179,6 +183,9 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
                 _emitStatus('connect-ok');
             }
         } catch (err) {
+            if (_isCancellation(err)) {
+                return;
+            }
             if (data.runtimeAcquisitionOnce) {
                 acquisitionState = 'error';
                 acquisitionError = err && err.message ? err.message : String(err);
@@ -204,6 +211,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         data = JSON.parse(JSON.stringify(_data));
         acquisitionState = 'pending';
         acquisitionError = '';
+        cancelled = false;
         traffic = { rx: 0, tx: 0, sta: 0, opeinfo: 0, errlog: 0 };
         const saved = historyCache()?.get(data.id);
         if (saved && saved.identity === historyIdentity()) {
@@ -339,6 +347,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         const hardDeadline = startedAt + Math.max(_timeoutMs() * 6, 60000);
         let response = '';
         while (Date.now() < deadline && Date.now() < hardDeadline) {
+            _throwIfCancelled();
             await _sleep(DEFAULT_READ_WINDOW_MS);
             if (receiveBuffer) {
                 response += receiveBuffer;
@@ -406,6 +415,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         });
 
         while (Date.now() < hardDeadline) {
+            _throwIfCancelled();
             await _sleep(50);
             if (receiveBuffer) {
                 const chunk = receiveBuffer;
@@ -464,6 +474,11 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         const startedAt = Date.now();
         return new Promise((resolve, reject) => {
             const timer = setInterval(() => {
+                if (cancelled) {
+                    clearInterval(timer);
+                    reject(_cancellationError());
+                    return;
+                }
                 if (receiveBuffer.indexOf(marker) !== -1) {
                     clearInterval(timer);
                     const response = receiveBuffer;
@@ -624,6 +639,20 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         }
         return false;
     }
+
+    function _throwIfCancelled() {
+        if (cancelled) throw _cancellationError();
+    }
+}
+
+function _cancellationError() {
+    const error = new Error('Acquisition cancelled');
+    error.code = ACQUISITION_CANCELLED;
+    return error;
+}
+
+function _isCancellation(error) {
+    return !!error && error.code === ACQUISITION_CANCELLED;
 }
 
 function _waitForConnect(sock, timeoutMs) {

@@ -66,6 +66,11 @@ it does not publish a partial sample as successful. The next site visit can retr
 The coordinator waits for both required fresh tags and completion of every
 managed Kawasaki sample, including ERRLOG. Required tags that a controller does
 not supply still cause the collection timeout; select only applicable addresses.
+While a managed acquisition is still active, the coordinator allows at least
+180 seconds so the initial large ERRLOG scan is not interrupted by an older
+90-second setting. Once device acquisition is complete, the configured timeout
+still applies to missing required tags. Cleanup cancels an active Telnet command
+immediately and does not report a second command timeout after the VPN cycle ends.
 
 ERRLOG history and the latest fingerprint survive device recreation between VPN
 visits in the same FUXA process. They are isolated by device ID and endpoint/login/
