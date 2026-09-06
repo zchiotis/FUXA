@@ -17,6 +17,8 @@ const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_READ_WINDOW_MS = 150;
 const DEFAULT_EXTEND_MS = 750;
 const DEFAULT_ERRLOG_INTERVAL_MS = 30000;
+const DEFAULT_ERRLOG_MAX_SCAN_RECORDS = 200;
+const DEFAULT_ERRLOG_MAX_SCAN_BYTES = 64 * 1024;
 const ERRLOG_SLOT_COUNT = 10;
 const DEFAULT_ERRLOG_IGNORE_CODES = 'E1326';
 const PAGE_MARKER = 'Press SPACE key to continue.';
@@ -148,6 +150,9 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
             if (!commandError && _isErrlogEnabled() && Date.now() >= nextErrlogAt) {
                 try {
                     const errlogResult = await _runErrlogIncremental();
+                    if (errlogResult.scanLimit) {
+                        logger.warn(`'${data.name}' ERRLOG scan stopped at ${errlogResult.scannedRecords} records/${errlogResult.scannedBytes} bytes with ${errlogResult.entries.length} accepted errors (${errlogResult.scanLimit} limit)`);
+                    }
                     if (errlogResult.firstFingerprint) {
                         errlogWatermark = errlogResult.firstFingerprint;
                     }
@@ -376,6 +381,9 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
         const ignoredCodes = _errlogIgnoredCodes();
         const entries = [];
         let firstFingerprint = '';
+        let scannedRecords = 0;
+        let scannedBytes = 0;
+        let scanLimit = '';
         let stopRequested = false;
         let requestedAfterCompleteScan = false;
         let stopDeadline = 0;
@@ -397,11 +405,17 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
             if (stopRequested) {
                 return;
             }
+            scannedRecords++;
             const fingerprint = errlogFingerprint(entry);
             if (!firstFingerprint) {
                 firstFingerprint = fingerprint;
             }
             if (previousWatermark && fingerprint === previousWatermark) {
+                requestStop(true);
+                return;
+            }
+            if (scannedRecords >= _errlogMaxScanRecords()) {
+                scanLimit = 'record';
                 requestStop(true);
                 return;
             }
@@ -420,8 +434,13 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
             if (receiveBuffer) {
                 const chunk = receiveBuffer;
                 receiveBuffer = '';
+                scannedBytes += Buffer.byteLength(chunk, 'utf8');
                 responseTail = `${responseTail}${chunk}`.slice(-4096);
                 parser.push(chunk);
+                if (!stopRequested && scannedBytes >= _errlogMaxScanBytes()) {
+                    scanLimit = 'byte';
+                    requestStop(true);
+                }
                 idleDeadline = Date.now() + _timeoutMs();
                 if (!stopRequested && responseTail.indexOf(PAGE_MARKER) !== -1) {
                     responseTail = responseTail.replace(PAGE_MARKER, '');
@@ -430,7 +449,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
             }
             if (_hasFinalPrompt(responseTail, 'errlog')) {
                 parser.flush();
-                return { entries, firstFingerprint };
+                return { entries, firstFingerprint, scannedRecords, scannedBytes, scanLimit };
             }
             // ERRLOG is the final command of a managed VPN visit. Once enough
             // history is collected, close the session instead of waiting for a
@@ -438,7 +457,7 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
             if (stopRequested && requestedAfterCompleteScan && data.runtimeAcquisitionOnce &&
                     Date.now() >= managedStopReadyAt) {
                 parser.flush();
-                return { entries, firstFingerprint };
+                return { entries, firstFingerprint, scannedRecords, scannedBytes, scanLimit };
             }
             if (stopRequested && Date.now() > stopDeadline) {
                 throw new Error('Timed out waiting for ERRLOG to stop');
@@ -617,6 +636,14 @@ function KawasakiClient(_data, _logger, _events, _manager, _runtime) {
 
     function _errlogIntervalMs() {
         return Math.max(Number(data.property && data.property.errlogIntervalMs) || DEFAULT_ERRLOG_INTERVAL_MS, 3000);
+    }
+
+    function _errlogMaxScanRecords() {
+        return Math.max(Number(data.property && data.property.errlogMaxScanRecords) || DEFAULT_ERRLOG_MAX_SCAN_RECORDS, ERRLOG_SLOT_COUNT);
+    }
+
+    function _errlogMaxScanBytes() {
+        return Math.max(Number(data.property && data.property.errlogMaxScanBytes) || DEFAULT_ERRLOG_MAX_SCAN_BYTES, 4096);
     }
 
     function _errlogIgnoredCodes() {

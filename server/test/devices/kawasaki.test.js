@@ -253,6 +253,31 @@ describe('Kawasaki telnet driver', function () {
         } finally { await client.disconnect(); await state.close(); }
     });
 
+    it('bounds the initial scan when ERRLOG contains only ignored errors', async function () {
+        const ignoredRecords = Array.from({ length: 1000 }, (_, index) =>
+            makeRecord('E1326', 'Safety fence is open.', `20:${String(index % 60).padStart(2, '0')}:00`));
+        const state = createFakeKawasakiServer(ignoredRecords);
+        await state.listen();
+        const warnings = [];
+        const data = { id: 'bounded', name: 'Bounded', runtimeAcquisitionOnce: true,
+            property: { address: '127.0.0.1', port: state.port(), timeoutMs: 2000,
+                opeinfo: false, errlog: true, errlogMaxScanRecords: 25, errlogMaxScanBytes: 1024 * 1024 },
+            tags: Object.fromEntries(DEFAULT_TAGS.filter(tag => tag.address.startsWith('errlog.'))
+                .map((tag, i) => [String(i), { ...tag, id: String(i), daq: {} }])) };
+        const client = require('../../runtime/devices/kawasaki').create(data,
+            { info() {}, warn(message) { warnings.push(message); }, error() {} }, new EventEmitter(), null, {});
+        try {
+            client.load(data);
+            await client.connect();
+            await client.polling();
+            assert.strictEqual(client.getAcquisitionStatus().state, 'complete');
+            assert.strictEqual(state.errlogStops, 1);
+            assert.ok(state.lastEntriesSent < ignoredRecords.length);
+            assert.ok(warnings.some((message) => /25 records.*0 accepted errors.*record limit/.test(message)));
+            assert.strictEqual(valueForAddress(client.getValues(), 'errlog.slot_01.code'), '');
+        } finally { await client.disconnect(); await state.close(); }
+    });
+
     it('cancels an active managed command without logging a later timeout', async function () {
         const state = createFakeKawasakiServer();
         state.hangErrlog = true;

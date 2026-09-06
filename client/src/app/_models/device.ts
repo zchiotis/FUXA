@@ -208,6 +208,11 @@ export class DeviceNetProperty {
     timeoutMs?: number;
     extendTimeoutMs?: number;
     opeinfo?: boolean;
+    errlog?: boolean;
+    errlogIntervalMs?: number;
+    errlogIgnoreCodes?: string;
+    errlogMaxScanRecords?: number;
+    errlogMaxScanBytes?: number;
     /** Talk2M Automator coordinator */
     apiToken?: string;
     autoCycle?: boolean;

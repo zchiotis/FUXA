@@ -66,11 +66,8 @@ it does not publish a partial sample as successful. The next site visit can retr
 The coordinator waits for both required fresh tags and completion of every
 managed Kawasaki sample, including ERRLOG. Required tags that a controller does
 not supply still cause the collection timeout; select only applicable addresses.
-While a managed acquisition is still active, the coordinator allows at least
-180 seconds so the initial large ERRLOG scan is not interrupted by an older
-90-second setting. Once device acquisition is complete, the configured timeout
-still applies to missing required tags. Cleanup cancels an active Telnet command
-immediately and does not report a second command timeout after the VPN cycle ends.
+Cleanup cancels an active Telnet command immediately and does not report a second
+command timeout after the VPN cycle ends.
 
 ERRLOG history and the latest fingerprint survive device recreation between VPN
 visits in the same FUXA process. They are isolated by device ID and endpoint/login/
@@ -84,6 +81,9 @@ for example `acquisition complete: STA=1 OPEINFO=1 ERRLOG=1 rx=... tx=... bytes`
 These counts exclude VPN, TCP and other application overhead. Filtering E1326
 discards received records; it cannot recover traffic already sent by the robot.
 The initial scan may still be large if the log contains mostly ignored errors.
+It stops as soon as ten accepted errors or the previous watermark is found, and
+is also bounded to 200 received records or 64 KiB per visit. Reaching a bound
+returns the accepted errors found so far; FUXA never publishes more than ten.
 
 For Windows headless, replace the executable only after stopping the old FUXA
 process; retain the existing project/data directories. Use the integrated branch

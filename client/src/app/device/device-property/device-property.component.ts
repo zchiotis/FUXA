@@ -437,7 +437,7 @@ export class DevicePropertyComponent implements OnInit, OnDestroy {
 		property.address = property.address || 'http://127.0.0.1:17831';
 		property.autoCycle = property.autoCycle !== false;
 		property.commandTimeoutSeconds = Number(property.commandTimeoutSeconds) || 120;
-		property.collectionTimeoutSeconds = Number(property.collectionTimeoutSeconds) || 180;
+		property.collectionTimeoutSeconds = Number(property.collectionTimeoutSeconds) || 90;
 		property.cycleDelaySeconds = Number(property.cycleDelaySeconds) || 300;
 		property.failureDelaySeconds = Number(property.failureDelaySeconds) || 5;
 		property.mappings = Array.isArray(property.mappings) ? property.mappings : [];
