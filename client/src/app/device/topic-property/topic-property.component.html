@@ -147,8 +147,10 @@
                             </div>
                             <div class="_my-form-field" style="display:block;">
                                 <span>{{'device.topic-publish-content' | translate}}</span>
-                                <div class="topic-publish-result" [innerHTML]="pubPayloadResult">
-                                </div>
+                                <textarea class="topic-publish-result" [(ngModel)]="pubPayloadResult"
+                                    (ngModelChange)="onPublishPayloadTextChanged($event)"
+                                    [readOnly]="topicSelectedPubType !== 'json'" spellcheck="false"></textarea>
+                                <div *ngIf="publishPayloadError" class="payload-error">{{publishPayloadError}}</div>
                             </div>
                         </div>
                     </div>

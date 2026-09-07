@@ -539,44 +539,46 @@
                             <mat-icon>add</mat-icon>
                         </button>
                     </div>
-                    <div class="t2m-mapping-row" *ngFor="let mapping of data.device.property.mappings; let idx = index">
-                        <mat-slide-toggle color="primary" [(ngModel)]="mapping.enabled"
-                            matTooltip="Include site in automatic collection"></mat-slide-toggle>
-                        <div class="my-form-field">
-                            <span>eCatcher site</span>
-                            <mat-select [(value)]="mapping.site" style="width: 190px">
-                                <mat-option *ngIf="mapping.site" [value]="mapping.site">{{mapping.site}}</mat-option>
-                                <mat-option *ngFor="let site of t2mSites" [value]="site.name">
-                                    {{site.name}} [{{site.status}}]
-                                </mat-option>
-                            </mat-select>
+                    <div class="t2m-mapping-list">
+                        <div class="t2m-mapping-row" *ngFor="let mapping of data.device.property.mappings; let idx = index">
+                            <mat-slide-toggle color="primary" [(ngModel)]="mapping.enabled"
+                                matTooltip="Include site in automatic collection"></mat-slide-toggle>
+                            <div class="my-form-field">
+                                <span>eCatcher site</span>
+                                <mat-select [(value)]="mapping.site" style="width: 190px">
+                                    <mat-option *ngIf="mapping.site" [value]="mapping.site">{{mapping.site}}</mat-option>
+                                    <mat-option *ngFor="let site of t2mSites" [value]="site.name">
+                                        {{site.name}} [{{site.status}}]
+                                    </mat-option>
+                                </mat-select>
+                            </div>
+                            <div class="my-form-field">
+                                <span>FUXA connections</span>
+                                <mat-select multiple [(value)]="mapping.connections" style="width: 210px"
+                                    (selectionChange)="onT2MConnectionsChanged(mapping, $event.value)">
+                                    <mat-option *ngFor="let connection of data.availableConnections" [value]="connection.name">
+                                        {{connection.name}}
+                                    </mat-option>
+                                </mat-select>
+                            </div>
+                            <div class="my-form-field">
+                                <span>Required tags
+                                    <button mat-icon-button matTooltip="Select all tags from selected connections"
+                                        (click)="selectAllT2MTags(mapping)">
+                                        <mat-icon>done_all</mat-icon>
+                                    </button>
+                                </span>
+                                <mat-select multiple [(value)]="mapping.requiredTags" style="width: 230px"
+                                    [disabled]="!mapping.connections.length">
+                                    <mat-option *ngFor="let tag of getT2MAvailableTags(mapping)" [value]="tag.id">
+                                        {{tag.name}}
+                                    </mat-option>
+                                </mat-select>
+                            </div>
+                            <button mat-icon-button color="warn" matTooltip="Remove mapping" (click)="removeT2MMapping(idx)">
+                                <mat-icon>delete</mat-icon>
+                            </button>
                         </div>
-                        <div class="my-form-field">
-                            <span>FUXA connections</span>
-                            <mat-select multiple [(value)]="mapping.connections" style="width: 210px"
-                                (selectionChange)="onT2MConnectionsChanged(mapping, $event.value)">
-                                <mat-option *ngFor="let connection of data.availableConnections" [value]="connection.name">
-                                    {{connection.name}}
-                                </mat-option>
-                            </mat-select>
-                        </div>
-                        <div class="my-form-field">
-                            <span>Required tags
-                                <button mat-icon-button matTooltip="Select all tags from selected connections"
-                                    (click)="selectAllT2MTags(mapping)">
-                                    <mat-icon>done_all</mat-icon>
-                                </button>
-                            </span>
-                            <mat-select multiple [(value)]="mapping.requiredTags" style="width: 230px"
-                                [disabled]="!mapping.connections.length">
-                                <mat-option *ngFor="let tag of getT2MAvailableTags(mapping)" [value]="tag.id">
-                                    {{tag.name}}
-                                </mat-option>
-                            </mat-select>
-                        </div>
-                        <button mat-icon-button color="warn" matTooltip="Remove mapping" (click)="removeT2MMapping(idx)">
-                            <mat-icon>delete</mat-icon>
-                        </button>
                     </div>
                 </div>
                 <div *ngSwitchCase="deviceType.ODBC">

@@ -40,6 +40,7 @@ export class TopicPropertyComponent implements OnInit, OnDestroy {
     publishTopicPath: string;
     pubPayload = new MqttPayload();
     pubPayloadResult = '';
+    publishPayloadError = '';
     itemType = MqttItemType;
     itemTag = Utils.getEnumKey(MqttItemType, MqttItemType.tag);
     itemTimestamp = Utils.getEnumKey(MqttItemType, MqttItemType.timestamp);
@@ -287,7 +288,7 @@ export class TopicPropertyComponent implements OnInit, OnDestroy {
     }
 
     onAddToPuplish() {
-        if (this.publishTopicPath && this.invokePublish) {
+        if (this.publishTopicPath && this.invokePublish && !this.publishPayloadError) {
             let tag = new Tag(Utils.getGUID(TAG_PREFIX));
             if (this.data.topic) {
                 tag = new Tag(this.data.topic.id);
@@ -322,6 +323,25 @@ export class TopicPropertyComponent implements OnInit, OnDestroy {
         this.stringifyPublishItem();
     }
 
+    onPublishPayloadTextChanged(payloadText: string) {
+        if (this.topicSelectedPubType !== 'json') {
+            return;
+        }
+        try {
+            const payload = JSON.parse(payloadText || '{}');
+            if (!payload || Array.isArray(payload) || typeof payload !== 'object') {
+                throw new Error('Payload must be a JSON object');
+            }
+            const flattened = this.flattenPayload(payload);
+            const parsedItems = Object.entries(flattened)
+                .map(([key, value]) => this.parsePublishPayloadItem(key, value));
+            this.pubPayload.items = parsedItems;
+            this.publishPayloadError = '';
+        } catch (err) {
+            this.publishPayloadError = err instanceof Error ? err.message : String(err);
+        }
+    }
+
     onItemTypeChanged(item: MqttPayloadItem) {
         if (item.type === this.itemTimestamp) {
             item.value = new Date().toISOString();
@@ -344,9 +364,9 @@ export class TopicPropertyComponent implements OnInit, OnDestroy {
                 let item: MqttPayloadItem = this.pubPayload.items[i];
                 let ivalue = item.value;
                 if (item.type === this.itemTimestamp) {
-                    ivalue = new Date().toISOString();
+                    ivalue = '$(timestamp)';
                 } else if (item.type === this.itemTag) {
-                    ivalue = `$(${item.name})`;
+                    ivalue = `$(${this.getPublishTagReference(item)})`;
                 } else if (item.type === this.itemStatic) {
                     ivalue = `${item.value}`;
                 } else if (item.type === this.itemValue) {
@@ -384,10 +404,109 @@ export class TopicPropertyComponent implements OnInit, OnDestroy {
         } else {
             this.pubPayloadResult = row;
         }
+        this.publishPayloadError = '';
     }
 
     isPublishValid() {
-        return (this.publishTopicPath && this.publishTopicPath.length) ? true : false;
+        return !!(this.publishTopicPath && this.publishTopicPath.length && !this.publishPayloadError
+            && (this.topicSelectedPubType !== 'json' || this.pubPayload.items.length));
+    }
+
+    private flattenPayload(value: any, prefix = '', result: Record<string, any> = {}): Record<string, any> {
+        Object.entries(value).forEach(([key, child]) => {
+            const path = prefix ? `${prefix}.${key}` : key;
+            if (child && typeof child === 'object') {
+                if (Array.isArray(child)) {
+                    throw new Error(`Arrays are not supported at '${path}'`);
+                }
+                this.flattenPayload(child, path, result);
+            } else {
+                result[path] = child;
+            }
+        });
+        return result;
+    }
+
+    private parsePublishPayloadItem(key: string, value: any): MqttPayloadItem {
+        const item = new MqttPayloadItem();
+        item.key = key;
+        if (value === '$(timestamp)') {
+            item.type = this.itemTimestamp;
+            item.value = new Date().toISOString();
+            return item;
+        }
+
+        const referenceMatch = typeof value === 'string' && value.match(/^\$\((.+)\)$/);
+        if (referenceMatch) {
+            const existing = this.pubPayload.items.find(candidate => candidate.key === key
+                && candidate.type !== this.itemStatic
+                && `$(${candidate.type === this.itemTag
+                    ? this.getPublishTagReference(candidate)
+                    : candidate.value})` === value);
+            if (existing) {
+                return Object.assign(new MqttPayloadItem(), existing, { key });
+            }
+            const resolved = this.resolvePublishTag(referenceMatch[1]);
+            item.type = this.itemTag;
+            item.value = resolved.tag.id;
+            item.name = resolved.tag.address || resolved.tag.name;
+            return item;
+        }
+
+        item.type = this.itemStatic;
+        item.value = value === null || value === undefined ? '' : String(value);
+        return item;
+    }
+
+    private resolvePublishTag(reference: string): { device: Device, tag: Tag } {
+        const tags = this.getPublishTags();
+        const idMatch = tags.find(entry => entry.tag.id === reference);
+        if (idMatch) {
+            return idMatch;
+        }
+
+        const separator = reference.indexOf('::');
+        let matches;
+        if (separator >= 0) {
+            const deviceName = reference.substring(0, separator).trim().toLowerCase();
+            const tagReference = reference.substring(separator + 2).trim().toLowerCase();
+            matches = tags.filter(entry => entry.device.name.toLowerCase() === deviceName
+                && this.tagMatchesReference(entry.tag, tagReference));
+        } else {
+            const tagReference = reference.trim().toLowerCase();
+            matches = tags.filter(entry => this.tagMatchesReference(entry.tag, tagReference));
+        }
+        if (matches.length === 1) {
+            return matches[0];
+        }
+        if (matches.length > 1) {
+            throw new Error(`Ambiguous tag '${reference}'. Use Device name::tag address`);
+        }
+        throw new Error(`Tag '${reference}' was not found`);
+    }
+
+    private tagMatchesReference(tag: Tag, reference: string): boolean {
+        return [tag.address, tag.name, tag.label]
+            .some(value => String(value || '').toLowerCase() === reference);
+    }
+
+    private getPublishTagReference(item: MqttPayloadItem): string {
+        const entry = this.getPublishTags().find(candidate => candidate.tag.id === item.value);
+        if (!entry) {
+            return item.name || item.value;
+        }
+        const address = entry.tag.address || entry.tag.name;
+        const duplicateCount = this.getPublishTags()
+            .filter(candidate => (candidate.tag.address || candidate.tag.name) === address).length;
+        return duplicateCount > 1 ? `${entry.device.name}::${address}` : address;
+    }
+
+    private getPublishTags(): { device: Device, tag: Tag }[] {
+        const result: { device: Device, tag: Tag }[] = [];
+        (this.data.devices || []).forEach(device => {
+            Object.values(device.tags || {}).forEach((tag: Tag) => result.push({ device, tag }));
+        });
+        return result;
     }
 
     toggleAllChecked() {

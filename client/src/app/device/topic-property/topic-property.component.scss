@@ -104,13 +104,26 @@
     }
 
     .topic-publish-result {
+        border: 1px solid var(--formBorder);
+        box-sizing: border-box;
+        color: inherit;
+        display: block;
         height: 160px;
+        resize: vertical;
+        width: 100%;
         background-color: var(--formInputBackground);
         padding: 5px 5px 3px 8px;
         overflow: auto;
         white-space: pre;
         font-family: monospace;
         font-size: 12px;
+    }
+
+    .payload-error {
+        color: #d32f2f;
+        font-size: 12px;
+        line-height: 18px;
+        margin-top: 4px;
     }
 
     .topic-subscription-header {
