@@ -4,6 +4,60 @@ const assert = require('assert');
 const { TAG_DEFINITIONS, _test } = require('../../runtime/devices/t2mautomator');
 
 describe('Talk2M Automator coordinator', function () {
+    it('keeps polling after a transient Automator status timeout', async function () {
+        const axios = require('axios');
+        const EventEmitter = require('events');
+        const savedGet = axios.get;
+        let request = 0;
+        const statuses = [];
+        const errors = [];
+        const events = new EventEmitter();
+        events.on('device-status:changed', (event) => statuses.push(event.status));
+        axios.get = async () => {
+            request += 1;
+            if (request === 2) {
+                const error = new Error('timeout of 10000ms exceeded');
+                error.code = 'ECONNABORTED';
+                throw error;
+            }
+            return { data: {
+                ecatcherRunning: true,
+                sites: [{ name: 'Test site', status: 'Online', enabled: true }],
+            } };
+        };
+        const data = {
+            id: 'coordinator',
+            name: 'Coordinator',
+            tags: {
+                alive: { id: 'alive', address: 'automator.alive', type: 'boolean' },
+            },
+            property: { autoCycle: false },
+        };
+        const runtime = { devices: {} };
+        const client = require('../../runtime/devices/t2mautomator').create(data,
+            { info() {}, warn() {}, error(value) { errors.push(value); } },
+            events, null, runtime);
+        try {
+            client.load(data);
+            await client.connect();
+            await client.polling();
+
+            assert.strictEqual(client.isConnected(), true);
+            assert.strictEqual(client.getStatus(), 'connect-ok');
+            assert.strictEqual(client.getValue('alive').value, false);
+            assert.strictEqual(errors.length, 1);
+
+            await client.polling();
+            assert.strictEqual(client.isConnected(), true);
+            assert.strictEqual(client.getStatus(), 'connect-ok');
+            assert.strictEqual(client.getValue('alive').value, true);
+            assert.deepStrictEqual(statuses, ['connect-ok']);
+        } finally {
+            await client.disconnect();
+            axios.get = savedGet;
+        }
+    });
+
     it('waits for the complete robot acquisition even when required tags arrived earlier', async function () {
         const axios = require('axios');
         const EventEmitter = require('events');

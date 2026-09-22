@@ -44,6 +44,8 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
     let nextCycleAt = 0;
     let activeCycle = createCycleState();
     let freshTagValues = new Map();
+    let lastPollingError = '';
+    let lastPollingErrorAt = 0;
 
     const onDeviceValues = (event) => {
         if (!cyclePromise || activeCycle.state !== 'collecting' || !event || !event.values) {
@@ -102,6 +104,11 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
             lastReadTimestamp = Date.now();
             emitStatus('connect-ok');
             applyAutomatorStatus(latestAutomatorStatus);
+            if (lastPollingError) {
+                logger.info(`'${data.name}' Automator status polling restored`, true);
+                lastPollingError = '';
+                lastPollingErrorAt = 0;
+            }
             if (autoCycle() && !cyclePromise && Date.now() >= nextCycleAt) {
                 const mapping = nextMapping();
                 if (mapping) {
@@ -121,11 +128,16 @@ function T2MAutomatorClient(_data, logger, events, _manager, runtime) {
                 }
             }
         } catch (err) {
-            connected = false;
             setValue('automator.alive', false);
             emitValues();
-            setCycleError(message(err));
-            emitStatus('connect-error');
+            const detail = message(err);
+            setCycleError(detail);
+            const now = Date.now();
+            if (detail !== lastPollingError || now - lastPollingErrorAt >= 60000) {
+                logger.error(`'${data.name}' Automator status poll failed: ${detail}`);
+                lastPollingError = detail;
+                lastPollingErrorAt = now;
+            }
         } finally {
             pollingBusy = false;
         }
