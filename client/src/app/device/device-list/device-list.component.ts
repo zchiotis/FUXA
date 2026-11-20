@@ -39,11 +39,13 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     dataSource = new MatTableDataSource([]);
     selection = new SelectionModel<Element>(true, []);
     devices: Device[];
+    groupedDevices: Array<{label: string, devices: Device[]}> = [];
     deviceType = DeviceType;
     tableWidth = this.defAllRowWidth;
     tagsMap = {};
     deviceSelected: Device = null;
     isDeviceToEdit = true;
+    isManagedTagDevice = false;
     isWithOptions = true;
 
     @Input() readonly = false;
@@ -65,6 +67,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
 
     ngOnInit() {
         this.devices = this.projectService.getDevices();
+        this.refreshGroupedDevices();
         if (!this.deviceSelected && this.devices) {
             this.deviceSelected = this.devices[0];
         }
@@ -77,6 +80,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
 
     mapTags() {
         this.devices = this.projectService.getDevices();
+        this.refreshGroupedDevices();
         Object.values(this.devices).forEach(d => {
             if (d.tags) {
                 Object.values(d.tags).forEach((t: Tag) => {
@@ -92,7 +96,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
             tags = {};
         }
         this.dataSource.data = Object.values(tags);
-        this.hmiService.viewsTagsSubscribe(Object.keys(tags));
+        this.hmiService.viewsTagsSubscribe(Object.keys(tags), true);
     }
 
     onDeviceChange(source) {
@@ -103,7 +107,9 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
 
     setSelectedDevice(device: Device) {
         this.devices = this.projectService.getDevices();
+        this.refreshGroupedDevices();
         this.updateDeviceValue();
+        this.isManagedTagDevice = device?.type === DeviceType.T2MAutomator;
         if (!device) {
             return;
         }
@@ -138,6 +144,9 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     }
 
     onRemoveRow(row) {
+        if (this.isManagedTagDevice) {
+            return;
+        }
         const index = this.dataSource.data.indexOf(row, 0);
         if (this.dataSource.data[index]) {
             delete this.deviceSelected.tags[this.dataSource.data[index].id];
@@ -147,6 +156,9 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     }
 
     onRemoveAll() {
+        if (this.isManagedTagDevice) {
+            return;
+        }
         let msg = '';
         this.translateService.get('msg.tags-remove-all').subscribe((txt: string) => { msg = txt; });
         let dialogRef = this.dialog.open(ConfirmDialogComponent, {
@@ -203,10 +215,18 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     }
 
     onAddTag() {
+        if (this.isManagedTagDevice) {
+            return;
+        }
         if (this.deviceSelected.type === DeviceType.OPCUA || this.deviceSelected.type === DeviceType.BACnet || this.deviceSelected.type === DeviceType.WebAPI) {
             this.addOpcTags();
         } else if (this.deviceSelected.type === DeviceType.MQTTclient) {
             this.editTopics();
+        } else if (this.deviceSelected.type === DeviceType.Kawasaki) {
+            const tag = new Tag(Utils.getGUID(TAG_PREFIX));
+            this.tagPropertyService.editTagPropertyKawasaki(this.deviceSelected, tag, true, this.tagsMap).subscribe(() => {
+                this.bindToTable(this.deviceSelected.tags);
+            });
         } else {
             let tag = new Tag(Utils.getGUID(TAG_PREFIX));
             this.editTag(tag, true);
@@ -276,7 +296,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
         if (type === DeviceType.SiemensS7 || type === DeviceType.ModbusTCP || type === DeviceType.ModbusRTU ||
             type === DeviceType.internal || type === DeviceType.EthernetIP || type === DeviceType.OmronEthernetIP || type === DeviceType.FuxaServer ||
             type === DeviceType.OPCUA || type === DeviceType.GPIO || type === DeviceType.ADSclient ||
-            type === DeviceType.WebCam || type === DeviceType.MELSEC || type === DeviceType.REDIS) {
+            type === DeviceType.WebCam || type === DeviceType.MELSEC || type === DeviceType.REDIS || type === DeviceType.Kawasaki) {
             return true;
         } else if (type === DeviceType.MQTTclient) {
             if (tag && tag.options && (tag.options.pubs || tag.options.subs)) {
@@ -364,6 +384,13 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
             });
             return;
         }
+        if (this.deviceSelected.type === DeviceType.Kawasaki) {
+            this.tagPropertyService.editTagPropertyKawasaki(this.deviceSelected, tag, checkToAdd, this.tagsMap).subscribe(result => {
+                this.tagsMap[tag.id] = tag;
+                this.bindToTable(this.deviceSelected.tags);
+            });
+            return;
+        }
     }
 
     editTagOptions(tags: Tag[]) {
@@ -405,7 +432,45 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     }
 
     devicesValue(): Array<Device> {
-        return Object.values(this.devices);
+        return this.groupedDevices.reduce((devices, group) => devices.concat(group.devices), []);
+    }
+
+    private refreshGroupedDevices() {
+        const groups = new Map<string, {label: string, devices: Device[]}>();
+        Object.values(this.devices || {}).forEach((device: Device) => {
+            const deviceGroup = String(device.group || '').trim();
+            const key = device.type === DeviceType.FuxaServer
+                ? '@@system'
+                : deviceGroup ? `group:${deviceGroup}` : '@@ungrouped';
+            const label = key === '@@system' ? 'System'
+                : key === '@@ungrouped' ? 'Ungrouped' : deviceGroup;
+            if (!groups.has(key)) {
+                groups.set(key, {label, devices: []});
+            }
+            groups.get(key).devices.push(device);
+        });
+        this.groupedDevices = Array.from(groups.entries())
+            .map(([key, group]) => ({
+                key,
+                label: group.label,
+                devices: group.devices.sort((a, b) => a.name.localeCompare(b.name))
+            }))
+            .sort((a, b) => {
+                if (a.key === '@@system') {
+                    return -1;
+                }
+                if (b.key === '@@system') {
+                    return 1;
+                }
+                if (a.key === '@@ungrouped') {
+                    return 1;
+                }
+                if (b.key === '@@ungrouped') {
+                    return -1;
+                }
+                return a.label.localeCompare(b.label);
+            })
+            .map(({label, devices}) => ({label, devices}));
     }
 
     /**

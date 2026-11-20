@@ -92,3 +92,27 @@
     padding-left: 5px !important;
     padding-right: 5px !important;
 }
+.t2m-mapping-header {
+    align-items: center;
+    border-bottom: 1px solid #bdbdbd;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+}
+
+.t2m-mapping-list {
+    max-height: clamp(180px, 36vh, 360px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+    scrollbar-gutter: stable;
+}
+
+.t2m-mapping-row {
+    align-items: flex-end;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    gap: 8px;
+    min-width: max-content;
+    padding: 8px 0;
+}

@@ -32,6 +32,7 @@ var jobsMgr;
 var tagsSubscription = new Map();
 var socketPool = new Map();
 var socketMutex = new Map();
+var melissa;
 
 function isSocketWriteAuthorized(socket) {
     if (!settings || !settings.secureEnabled) {
@@ -52,6 +53,9 @@ function init(_io, _api, _settings, _log, eventsMain) {
     settings = _settings;
     logger = _log;
     api = _api;
+    if (settings.melissa?.enabled && !melissa) {
+        melissa = require('./melissa').create(runtime);
+    }
     // check runtime init dependency and send to main if ready
     var checkInit = function () {
         if (!events.listenerCount('init-plugins-ok') && !events.listenerCount('init-users-ok') && !events.listenerCount('init-project-ok')) {
@@ -777,4 +781,5 @@ var runtime = module.exports = {
     get socketPool() { return socketPool },
     get socketMutex() {return socketMutex },
     get apiKeys() { return apiKeys }
+    ,get melissa() { return melissa }
 }

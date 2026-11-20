@@ -1,0 +1,108 @@
+name: Melissa FUXA-AGV Windows
+on:
+  push:
+    branches: [FUXA-AGV]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: melissa-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+      - name: Install server and Siemens native driver
+        working-directory: server
+        run: |
+          npm ci --no-audit --no-fund
+          npm install --no-save --package-lock=false node-snap7@1.0.9
+          node -e "require('sqlite3');require('node-snap7'); console.log('Native SQLite and S7 libraries loaded')"
+      - name: Generate Melissa project
+        working-directory: server
+        run: node tools/melissa/generate-project.js
+      - name: Test runtime, logging, mapping and Kawasaki
+        working-directory: server
+        run: npx mocha test/melissa/*.test.js test/devices/kawasaki.test.js test/devices/runtimeSnapshots.test.js --timeout 20000
+      - name: Install client
+        working-directory: client
+        run: npm ci --no-audit --no-fund
+      - name: Compile client
+        working-directory: client
+        run: npm run build -- --configuration=production
+      - name: Prepare portable Windows package
+        shell: pwsh
+        run: |
+          $packageRoot = Join-Path $env:RUNNER_TEMP 'Melissa-FUXA-AGV'
+          New-Item -ItemType Directory -Path $packageRoot | Out-Null
+          Copy-Item -Path server -Destination $packageRoot -Recurse
+          New-Item -ItemType Directory -Path (Join-Path $packageRoot 'client') | Out-Null
+          Copy-Item -Path client/dist -Destination (Join-Path $packageRoot 'client') -Recurse
+          New-Item -ItemType Directory -Path (Join-Path $packageRoot 'examples') | Out-Null
+          Copy-Item -Path examples/melissa -Destination (Join-Path $packageRoot 'examples') -Recurse
+          Copy-Item -LiteralPath (Get-Command node).Source -Destination (Join-Path $packageRoot 'node.exe')
+          Copy-Item -Path examples/melissa/Start-Melissa.cmd -Destination $packageRoot
+          Copy-Item -Path examples/melissa/README.md -Destination $packageRoot
+          @{commit='${{ github.sha }}';run='${{ github.run_id }}';fuxa='1.3.4-2888';melissa='0.1.0'} | ConvertTo-Json | Set-Content (Join-Path $packageRoot 'build.json')
+          Write-Output "MELISSA_PACKAGE=$packageRoot" >> $env:GITHUB_ENV
+      - name: Start isolated FUXA for remote smoke test
+        shell: pwsh
+        run: |
+          & "$env:MELISSA_PACKAGE/node.exe" "$env:MELISSA_PACKAGE/server/tools/melissa/prepare.js"
+          if ($LASTEXITCODE -ne 0) { throw 'Prepare failed' }
+          $testProcess = Start-Process -FilePath "$env:MELISSA_PACKAGE/node.exe" -ArgumentList @('server/main.js','--userDir','data','--port','1881') -WorkingDirectory $env:MELISSA_PACKAGE -WindowStyle Hidden -PassThru -RedirectStandardOutput "$env:RUNNER_TEMP/melissa-out.log" -RedirectStandardError "$env:RUNNER_TEMP/melissa-err.log"
+          Write-Output "MELISSA_PID=$($testProcess.Id)" >> $env:GITHUB_ENV
+          $ready = $false
+          for ($attempt=0; $attempt -lt 45; $attempt++) {
+            try { $snapshot=Invoke-RestMethod 'http://127.0.0.1:1881/api/melissa/snapshot'; if ($snapshot.manifest.stations.Count -eq 35) { $ready=$true; break } } catch {}
+            Start-Sleep -Seconds 2
+          }
+          if (!$ready) { Get-Content "$env:RUNNER_TEMP/melissa-out.log"; Get-Content "$env:RUNNER_TEMP/melissa-err.log"; throw 'FUXA did not become ready' }
+          if ($snapshot.devices | Where-Object enabled) { throw 'A production device is enabled in the test package' }
+      - name: Browser checks and screenshots
+        shell: pwsh
+        run: |
+          npm exec --yes --package=@playwright/test -- playwright install chromium
+          npm install --prefix "$env:RUNNER_TEMP/melissa-browser" --no-audit --no-fund playwright
+          $env:NODE_PATH="$env:RUNNER_TEMP/melissa-browser/node_modules"
+          node server/tools/melissa/browser-check.js
+      - name: Stop remote smoke test
+        if: always()
+        shell: pwsh
+        run: |
+          if ($env:MELISSA_PID) { Stop-Process -Id $env:MELISSA_PID -ErrorAction SilentlyContinue }
+      - name: Package clean runtime, without CI test database
+        shell: pwsh
+        run: |
+          $testData = [IO.Path]::GetFullPath((Join-Path $env:MELISSA_PACKAGE 'data'))
+          if (!$testData.StartsWith([IO.Path]::GetFullPath($env:RUNNER_TEMP)+[IO.Path]::DirectorySeparatorChar)) { throw 'Unexpected test data path' }
+          Remove-Item -LiteralPath $testData -Recurse -Force
+          Compress-Archive -Path "$env:MELISSA_PACKAGE/*" -DestinationPath "$env:RUNNER_TEMP/Melissa-FUXA-AGV-windows-x64.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Melissa-FUXA-AGV-windows-x64-${{ github.run_number }}
+          path: ${{ runner.temp }}/Melissa-FUXA-AGV-windows-x64.zip
+          retention-days: 30
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Melissa-HMI-QA-${{ github.run_number }}
+          path: |
+            artifacts/melissa-qa
+            ${{ runner.temp }}/melissa-*.log
+          if-no-files-found: warn
+      - name: Publish build links
+        shell: pwsh
+        run: |
+          "## Melissa FUXA-AGV" >> $env:GITHUB_STEP_SUMMARY
+          "Portable package and HMI screenshots are under Artifacts on this run." >> $env:GITHUB_STEP_SUMMARY
+          "All connections are disabled. CI tests use synthetic data only. PLC validation is pending." >> $env:GITHUB_STEP_SUMMARY

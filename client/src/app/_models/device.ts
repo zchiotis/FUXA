@@ -21,6 +21,8 @@ export class Device {
     id: string;
     /** Device name */
     name: string;
+    /** Optional UI group used to organize connections */
+    group?: string;
     /** Enabled */
     enabled: boolean;
     /** Connection property, DeviceNetProperty */
@@ -40,7 +42,7 @@ export class Device {
         id: 'Device id, GUID',
         name: 'Device name',
         enabled: 'Enabled',
-        type: 'Device Type: FuxaServer | SiemensS7 | OPCUA | BACnet | ModbusRTU | ModbusTCP | WebAPI | MQTTclient | internal | EthernetIP | ADSclient | Gpio | WebCam | MELSEC | REDIS',
+        type: 'Device Type: FuxaServer | SiemensS7 | OPCUA | BACnet | ModbusRTU | ModbusTCP | WebAPI | MQTTclient | internal | EthernetIP | ADSclient | Gpio | WebCam | MELSEC | REDIS | Kawasaki | T2MAutomator',
         polling: 'Polling interval in millisec., check changed value after ask value, by OPCUA there is a monitor',
         property: 'Connection property depending of type',
         tags: 'Tags list of Tag',
@@ -200,6 +202,25 @@ export class DeviceNetProperty {
     /** MELSEC */
     ascii?: boolean;
     octalIO?: boolean;
+    /** Kawasaki AS monitor telnet */
+    loginCommand?: string;
+    readyMarker?: string;
+    timeoutMs?: number;
+    extendTimeoutMs?: number;
+    opeinfo?: boolean;
+    errlog?: boolean;
+    errlogIntervalMs?: number;
+    errlogIgnoreCodes?: string;
+    errlogMaxScanRecords?: number;
+    errlogMaxScanBytes?: number;
+    /** Talk2M Automator coordinator */
+    apiToken?: string;
+    autoCycle?: boolean;
+    commandTimeoutSeconds?: number;
+    collectionTimeoutSeconds?: number;
+    cycleDelaySeconds?: number;
+    failureDelaySeconds?: number;
+    mappings?: T2MSiteMapping[];
 
     static descriptor = {
         address: 'Device address (IP)',
@@ -252,8 +273,17 @@ export enum DeviceType {
     GPIO = 'GPIO',
     WebCam = 'WebCam',
     MELSEC = 'MELSEC',
-    REDIS = 'REDIS'
+    REDIS = 'REDIS',
+    Kawasaki = 'Kawasaki',
+    T2MAutomator = 'T2MAutomator'
     // Template: 'template'
+}
+
+export interface T2MSiteMapping {
+    enabled: boolean;
+    site: string;
+    connections: string[];
+    requiredTags: string[];
 }
 
 export enum TagType {

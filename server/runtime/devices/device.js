@@ -4,6 +4,7 @@
 
 'use strict';
 var S7client = require('./s7');
+var MelissaClient = require('./melissa');
 var OpcUAclient = require('./opcua');
 var MODBUSclient = require('./modbus');
 var BACNETclient = require('./bacnet');
@@ -19,6 +20,8 @@ var GpioClient = require('./gpio');
 var WebCamClient = require('./webcam');
 var MELSECclient = require('./melsec');
 var REDISclient = require('./redis');
+var KawasakiClient = require('./kawasaki');
+var T2MAutomatorClient = require('./t2mautomator');
 
 const path = require('path');
 const utils = require('../utils');
@@ -44,6 +47,7 @@ function Device(data, runtime) {
     var pollingInterval = DEVICE_POLLING_INTERVAL;
     var sharedDevices = data.sharedDevices;
     var tryToConnect = 0;
+    var connecting = false;
     var comm;                                               // Interface to OPCUA/S7/.. Device
                                                             // required: connect, disconnect, isConnected, polling, init, load, getValue,
                                                             // getValues, getStatus, setValue, bindAddDaq, getTagProperty,
@@ -53,7 +57,8 @@ function Device(data, runtime) {
         if (!S7client) {
             return null;
         }
-        comm = S7client.create(data, logger, events, manager, runtime);
+        comm = data.property?.melissa ? MelissaClient.create(data, logger, events, manager, runtime)
+            : S7client.create(data, logger, events, manager, runtime);
     } else if (data.type === DeviceEnum.OPCUA) {
         if (!OpcUAclient) {
             return null;
@@ -125,6 +130,17 @@ function Device(data, runtime) {
             return null;
         }
         comm = REDISclient.create(data, logger, events, manager, runtime);
+    } else if (data.type === DeviceEnum.Kawasaki) {
+        if (!KawasakiClient) {
+            return null;
+        }
+        data.polling = Math.max(Number(data.polling) || 3000, 3000);
+        comm = KawasakiClient.create(data, logger, events, manager, runtime);
+    } else if (data.type === DeviceEnum.T2MAutomator) {
+        if (!T2MAutomatorClient) {
+            return null;
+        }
+        comm = T2MAutomatorClient.create(data, logger, events, manager, runtime);
     }
     // else if (data.type === DeviceEnum.Template) {
     //     if (!TEMPLATEclient) {
@@ -179,18 +195,33 @@ function Device(data, runtime) {
      * Check the Device connection, Reconnect
      */
     this.checkStatus = function () {
-        if (status === DeviceStatusEnum.INIT && currentCmd === DeviceCmdEnum.START) {
+        if (comm.getAcquisitionStatus && ['complete', 'error'].includes(comm.getAcquisitionStatus().state)) {
+            return;
+        }
+        if (status === DeviceStatusEnum.INIT && currentCmd === DeviceCmdEnum.START && !connecting) {
             const self = this;
+            connecting = true;
             this.connect().then(() => {
+                if (currentCmd !== DeviceCmdEnum.START) {
+                    if (devicePolling) {
+                        clearInterval(devicePolling);
+                        devicePolling = null;
+                    }
+                    return self.disconnect();
+                }
                 tryToConnect = 0;
                 status = DeviceStatusEnum.IDLE;
                 self.restoreValues();
             }).catch(function (err) {
-                logger.error(`'${property.name}' connect error! ${err} (${tryToConnect})`);
-                if (tryToConnect++ > 3) {
-                    tryToConnect = 0;
-                    self.disconnect().then(() => {});
+                if (currentCmd === DeviceCmdEnum.START) {
+                    logger.error(`'${property.name}' connect error! ${err} (${tryToConnect})`);
+                    if (tryToConnect++ > 3) {
+                        tryToConnect = 0;
+                        self.disconnect().then(() => {});
+                    }
                 }
+            }).finally(function () {
+                connecting = false;
             });
         } else if (status === DeviceStatusEnum.IDLE && !comm.isConnected()) {
             status = DeviceStatusEnum.INIT;
@@ -217,8 +248,12 @@ function Device(data, runtime) {
     /**
      * Call Device to polling
      */
-    this.polling = function () {
-        comm.polling();
+    this.polling = async function () {
+        await comm.polling();
+        if (comm.getAcquisitionStatus && ['complete', 'error'].includes(comm.getAcquisitionStatus().state)) {
+            clearInterval(devicePolling);
+            devicePolling = null;
+        }
     }
 
     /**
@@ -251,6 +286,9 @@ function Device(data, runtime) {
      * Call Device to load Tags propperty in local for polling read values
      */
     this.load = function (data) {
+        if (data.type === DeviceEnum.Kawasaki) {
+            data.polling = Math.max(Number(data.polling) || 3000, 3000);
+        }
         pollingInterval = data.polling || ((data.type === DeviceEnum.FuxaServer) ? SERVER_POLLING_INTERVAL : DEVICE_POLLING_INTERVAL);
         data.polling = pollingInterval;
         return comm.load(data);
@@ -281,6 +319,9 @@ function Device(data, runtime) {
      * Call Device to set Tag value
      */
     this.setValue = async function (id, value, fnc) {
+        if (data.property?.melissaReadOnly) {
+            throw new Error('Melissa commands are disabled pending agreed command bits and interlocks.');
+        }
         var fncvalue = this.getValueInFunction(this.getValue(id), value, fnc);
         return await comm.setValue(id, value);
     }
@@ -315,6 +356,18 @@ function Device(data, runtime) {
                     reject(err);
                 });
             } else if (data.type === DeviceEnum.REDIS) {
+                comm.browse(path, callback).then(function (result) {
+                    resolve(result);
+                }).catch(function (err) {
+                    reject(err);
+                });
+            } else if (data.type === DeviceEnum.Kawasaki) {
+                comm.browse(path, callback).then(function (result) {
+                    resolve(result);
+                }).catch(function (err) {
+                    reject(err);
+                });
+            } else if (data.type === DeviceEnum.T2MAutomator) {
                 comm.browse(path, callback).then(function (result) {
                     resolve(result);
                 }).catch(function (err) {
@@ -495,6 +548,12 @@ function getSupportedProperty(endpoint, type, packagerManager) {
             }).catch(function (err) {
                 reject(err);
             });
+        } else if (type === DeviceEnum.T2MAutomator) {
+            T2MAutomatorClient.getSites(endpoint).then(function (result) {
+                resolve(result);
+            }).catch(function (err) {
+                reject(err);
+            });
         } else {
             reject('getSupportedProperty not supported!');
         }
@@ -552,6 +611,10 @@ function loadPlugin(type, module) {
         MELSECclient = require(module);
     } else if (type === DeviceEnum.REDIS) {
         REDISclient = require(module);
+    } else if (type === DeviceEnum.Kawasaki) {
+        KawasakiClient = require(module);
+    } else if (type === DeviceEnum.T2MAutomator) {
+        T2MAutomatorClient = require(module);
     }
 }
 
@@ -595,6 +658,8 @@ var DeviceEnum = {
     WebCam: 'WebCam',
     MELSEC: 'MELSEC',
     REDIS: 'REDIS',
+    Kawasaki: 'Kawasaki',
+    T2MAutomator: 'T2MAutomator',
     // Template: 'template'
 }
 

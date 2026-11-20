@@ -1,0 +1,46 @@
+:host {
+    .container {
+        width: 660px;
+        max-width: calc(100vw - 40px);
+    }
+
+    .item-block {
+        display: block;
+
+        mat-select,
+        input,
+        span {
+            width: calc(100% - 5px);
+        }
+    }
+
+    .selection-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .selection-actions > span {
+        margin-left: auto;
+        opacity: .75;
+    }
+
+    .address-option {
+        display: inline-block;
+        width: 72%;
+        font-family: monospace;
+    }
+
+    .type-option {
+        display: inline-block;
+        width: 28%;
+        text-align: right;
+        opacity: .7;
+    }
+
+    .loading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+}

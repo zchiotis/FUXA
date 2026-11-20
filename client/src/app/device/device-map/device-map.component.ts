@@ -30,9 +30,14 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
     devicesViewList = DeviceViewModeType.list;
     deviceStatusType = DeviceConnectionStatusType;
 
-    displayedColumns = ['select', 'name', 'type', 'polling', 'address', 'status', 'enabled', 'remove'];
+    displayedColumns = ['select', 'name', 'group', 'type', 'polling', 'address', 'status', 'enabled', 'remove'];
     dataSource = new MatTableDataSource([]);
-    tableWidth = 1200;
+    tableWidth = 1340;
+
+    readonly allGroups = '@@all';
+    readonly ungrouped = '@@ungrouped';
+    selectedGroup = localStorage.getItem('@frango.connectiongroup') || this.allGroups;
+    groupOptions: Array<{key: string, label: string, count: number}> = [];
 
     @ViewChild(MatTable, {static: false}) table: MatTable<any>;
     @ViewChild(MatSort, {static: false}) sort: MatSort;
@@ -94,6 +99,8 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
         }
 
         this.dataSource.paginator = this.paginator;
+        this.dataSource.sortingDataAccessor = (device: Device, property: string) =>
+            property === 'group' ? this.getDeviceGroupLabel(device) : device[property];
         this.dataSource.sort = this.sort;
     }
 
@@ -126,7 +133,8 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
 
     loadDevices() {
         this.devices = this.projectService.checkSystemTags();
-        this.dataSource.data = Object.values(this.devices);
+        this.updateGroupOptions();
+        this.updateVisibleDevices();
     }
 
     loadAvailableType() {
@@ -143,6 +151,8 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
             });
             this.plugins.push(DeviceType.WebAPI);
             this.plugins.push(DeviceType.MQTTclient);
+            this.plugins.push(DeviceType.Kawasaki);
+            this.plugins.push(DeviceType.T2MAutomator);
             this.plugins.push(DeviceType.internal);
         } else {
             this.plugins.push(DeviceType.internal);
@@ -154,7 +164,78 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
         device.property = new DeviceNetProperty();
         device.enabled = false;
         device.tags = {};
+        if (this.selectedGroup !== this.allGroups && this.selectedGroup !== this.ungrouped) {
+            device.group = this.selectedGroup;
+        }
         this.editDevice(device, false);
+    }
+
+    onGroupChange(group: string) {
+        this.selectedGroup = group || this.allGroups;
+        localStorage.setItem('@frango.connectiongroup', this.selectedGroup);
+        this.updateVisibleDevices();
+        if (this.paginator) {
+            this.paginator.firstPage();
+        }
+    }
+
+    getDeviceGroupLabel(device: Device): string {
+        if (device?.type === DeviceType.FuxaServer) {
+            return 'System';
+        }
+        return this.normalizeGroup(device?.group) || 'Ungrouped';
+    }
+
+    private normalizeGroup(group: string): string {
+        return String(group || '').trim();
+    }
+
+    private matchesSelectedGroup(device: Device): boolean {
+        if (this.selectedGroup === this.allGroups) {
+            return true;
+        }
+        const group = this.normalizeGroup(device?.group);
+        return this.selectedGroup === this.ungrouped ? !group : group === this.selectedGroup;
+    }
+
+    private updateGroupOptions() {
+        const counts = new Map<string, number>();
+        Object.values(this.devices || {}).forEach((device: Device) => {
+            if (device.type === DeviceType.FuxaServer) {
+                return;
+            }
+            const group = this.normalizeGroup(device.group) || this.ungrouped;
+            counts.set(group, (counts.get(group) || 0) + 1);
+        });
+        this.groupOptions = Array.from(counts.entries())
+            .map(([key, count]) => ({
+                key,
+                label: key === this.ungrouped ? 'Ungrouped' : key,
+                count
+            }))
+            .sort((a, b) => {
+                if (a.key === this.ungrouped) {
+                    return 1;
+                }
+                if (b.key === this.ungrouped) {
+                    return -1;
+                }
+                return a.label.localeCompare(b.label);
+            });
+        if (this.selectedGroup !== this.allGroups
+            && !this.groupOptions.some(option => option.key === this.selectedGroup)) {
+            this.selectedGroup = this.allGroups;
+            localStorage.setItem('@frango.connectiongroup', this.selectedGroup);
+        }
+    }
+
+    private updateVisibleDevices() {
+        this.dataSource.data = (<Device[]>Object.values(this.devices || {}))
+            .filter(device => device.type === DeviceType.FuxaServer || this.matchesSelectedGroup(device))
+            .sort((a, b) => {
+                const groupCompare = this.getDeviceGroupLabel(a).localeCompare(this.getDeviceGroupLabel(b));
+                return groupCompare || a.name.localeCompare(b.name);
+            });
     }
 
     onRemoveDevice(device: Device) {
@@ -349,16 +430,21 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
             if (type === 'flow') {
                 if (this.flows().length) {
                     let result: Device[] = this.flows();
-                    return result.sort((a, b) => (a.name > b.name) ? 1 : -1);
+                    return result.sort((a, b) => this.compareDevicesByGroup(a, b));
                 }
             } else {
                 if (this.plcs().length) {
                     let result: Device[] = this.plcs();
-                    return result.sort((a, b) => (a.name > b.name) ? 1 : -1);
+                    return result.sort((a, b) => this.compareDevicesByGroup(a, b));
                 }
             }
         }
         return [];
+    }
+
+    private compareDevicesByGroup(a: Device, b: Device): number {
+        const groupCompare = this.getDeviceGroupLabel(a).localeCompare(this.getDeviceGroupLabel(b));
+        return groupCompare || a.name.localeCompare(b.name);
     }
 
     onListDevice(device: Device) {
@@ -473,7 +559,27 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
             panelClass: 'dialog-property',
             data: {
                 device: tempdevice, remove: toremove, exist: exist, availableType: this.plugins,
-                projectService: this.projectService
+                projectService: this.projectService,
+                availableGroups: this.groupOptions
+                    .filter(option => option.key !== this.ungrouped)
+                    .map(option => option.label),
+                availableConnections: Object.values(this.devices)
+                    .filter((item: Device) => item.id !== device.id
+                        && item.type !== DeviceType.FuxaServer
+                        && item.type !== DeviceType.internal
+                        && item.type !== DeviceType.T2MAutomator)
+                    .map((item: Device) => ({ name: item.name, type: item.type })),
+                availableTags: Object.values(this.devices)
+                    .filter((item: Device) => item.id !== device.id
+                        && item.type !== DeviceType.FuxaServer
+                        && item.type !== DeviceType.internal
+                        && item.type !== DeviceType.T2MAutomator)
+                    .reduce((tags: any[], item: Device) => tags.concat(
+                        Object.values(item.tags || {}).map((tag: any) => ({
+                            id: tag.id,
+                            name: `${item.name} / ${tag.name}`,
+                            deviceName: item.name
+                        }))), [])
             },
             position: { top: '60px' }
         });
@@ -487,6 +593,7 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
                 } else {
                     let olddevice = JSON.parse(JSON.stringify(device));
                     device.name = tempdevice.name;
+                    device.group = this.normalizeGroup(tempdevice.group);
                     device.type = tempdevice.type;
                     device.enabled = tempdevice.enabled;
                     device.polling = tempdevice.polling;
@@ -514,6 +621,30 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
                         if (device.type === DeviceType.MELSEC) {
                             device.property.ascii = tempdevice.property.ascii;
                             device.property.octalIO = tempdevice.property.octalIO;
+                        }
+                        if (device.type === DeviceType.Kawasaki) {
+                            device.polling = Math.max(Number(tempdevice.polling) || 3000, 3000);
+                            device.property.loginCommand = tempdevice.property.loginCommand || 'as';
+                            device.property.readyMarker = tempdevice.property.readyMarker || '>';
+                            device.property.timeoutMs = parseInt(tempdevice.property.timeoutMs) || 10000;
+                            device.property.extendTimeoutMs = parseInt(tempdevice.property.extendTimeoutMs) || undefined;
+                            device.property.opeinfo = tempdevice.property.opeinfo !== false;
+                            device.property.errlog = tempdevice.property.errlog === true;
+                            device.property.errlogIntervalMs = parseInt(tempdevice.property.errlogIntervalMs) || 30000;
+                            device.property.errlogIgnoreCodes = tempdevice.property.errlogIgnoreCodes == null ?
+                                'E1326' : tempdevice.property.errlogIgnoreCodes;
+                        }
+                        if (device.type === DeviceType.T2MAutomator) {
+                            device.polling = Math.max(Number(tempdevice.polling) || 3000, 3000);
+                            device.tags = tempdevice.tags || {};
+                            device.property.apiToken = tempdevice.property.apiToken || '';
+                            device.property.autoCycle = tempdevice.property.autoCycle !== false;
+                            device.property.commandTimeoutSeconds = Number(tempdevice.property.commandTimeoutSeconds) || 120;
+                            device.property.collectionTimeoutSeconds = Number(tempdevice.property.collectionTimeoutSeconds) || 90;
+                            device.property.cycleDelaySeconds = Number(tempdevice.property.cycleDelaySeconds) || 300;
+                            device.property.failureDelaySeconds = Number(tempdevice.property.failureDelaySeconds) || 5;
+                            device.property.mappings = tempdevice.property.mappings || [];
+                            device.property.statusSites = tempdevice.property.statusSites || [];
                         }
                         if (tempdevice.property.connectionOption) {
                             device.property.connectionOption = tempdevice.property.connectionOption;
@@ -544,12 +675,16 @@ export class DeviceMapComponent implements OnInit, OnDestroy, AfterViewInit {
         return <Device[]>Object.values(this.devices).filter((d: Device) => d.type !== DeviceType.WebAPI
             && d.type !== DeviceType.FuxaServer
             && d.type !== DeviceType.ODBC
-            && d.type !== DeviceType.internal);
+            && d.type !== DeviceType.internal
+            && d.type !== DeviceType.T2MAutomator
+            && this.matchesSelectedGroup(d));
     }
 
     flows(): Device[] {
         return <Device[]>Object.values(this.devices).filter((d: Device) => d.type === DeviceType.WebAPI
             || d.type === DeviceType.ODBC
-            || d.type === DeviceType.internal);
+            || d.type === DeviceType.internal
+            || d.type === DeviceType.T2MAutomator)
+            .filter((d: Device) => this.matchesSelectedGroup(d));
     }
 }

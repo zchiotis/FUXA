@@ -66,6 +66,7 @@ function init(_server, _runtime) {
             // Apply before route handlers so sub-routers are covered too.
             apiApp.use(authLimiter);
             apiApp.use(limiter);
+            apiApp.use(require('./melissa').create(runtime, authMiddleware, verifyGroups));
 
             prjApi.init(runtime, authMiddleware, verifyGroups);
             apiApp.use(prjApi.app());

@@ -7,6 +7,7 @@ var Device = require('./device');
 
 var sharedDevices = {};             // Shared Devices list
 var activeDevices = {};             // Actives Devices list
+var runtimeDeviceSnapshots = {};    // Last good values for temporarily managed devices
 var runtime;                        // Access to application resource like logger/settings
 var wokingStatus;                   // Current status (start/stop) to know if is working
 
@@ -77,6 +78,7 @@ function update() {
  * @param {*} device
  */
 function updateDevice(device) {
+    delete runtimeDeviceSnapshots[device.id];
     if (!activeDevices[device.id]) {
         if (devices.loadDevice(device) && device.enabled) {
             activeDevices[device.id].start();
@@ -100,6 +102,7 @@ function updateDevice(device) {
  * @param {*} device
  */
 function removeDevice(device) {
+    delete runtimeDeviceSnapshots[device.id];
     if (!activeDevices[device.id]) {
         delete activeDevices[device.id];
     } else {
@@ -118,7 +121,21 @@ function removeDevice(device) {
 function load() {
     var tempdevices = runtime.project.getDevices();
     var serverDevice = runtime.project.getServer();
+    const t2mManagedDevices = new Set();
+    Object.values(tempdevices).forEach((device) => {
+        if (device.type !== 'T2MAutomator' || !device.enabled) {
+            return;
+        }
+        const mappings = device.property && Array.isArray(device.property.mappings)
+            ? device.property.mappings : [];
+        mappings.forEach((mapping) => {
+            if (mapping.enabled !== false && Array.isArray(mapping.connections)) {
+                mapping.connections.forEach((name) => t2mManagedDevices.add(name));
+            }
+        });
+    });
     activeDevices = {};
+    runtimeDeviceSnapshots = {};
     runtime.daqStorage.reset();
     if (serverDevice) {
         devices.loadDevice(serverDevice);
@@ -128,7 +145,7 @@ function load() {
         if (serverDevice && id === FuxaServerId) {
             continue;
         }
-        if (tempdevices[id].enabled) {
+        if (tempdevices[id].enabled && !t2mManagedDevices.has(tempdevices[id].name)) {
             if(tempdevices[id].type == 'ModbusRTU'){
                 if(!(tempdevices[id].property.address in sharedDevices)){
                     sharedDevices[tempdevices[id].property.address] = [];
@@ -195,6 +212,9 @@ function getDevicesStatus() {
  */
 function getDevicesValues() {
     var adev = {};
+    for (var snapshotId in runtimeDeviceSnapshots) {
+        adev[snapshotId] = runtimeDeviceSnapshots[snapshotId];
+    }
     for (var id in activeDevices) {
         adev[id] = activeDevices[id].getValues();
     }
@@ -213,6 +233,9 @@ function getDeviceValue(deviceid, sigid) {
     if (activeDevices[deviceid]) {
         return activeDevices[deviceid].getValue(sigid);
     }
+    if (runtimeDeviceSnapshots[deviceid]) {
+        return runtimeDeviceSnapshots[deviceid][sigid] || null;
+    }
     return null;
 }
 
@@ -229,6 +252,15 @@ function getDeviceValue(deviceid, sigid) {
             let result = activeDevices[deviceid].getValue(sigid);
             if (fully) {
                 return result;
+            } else if (result) {
+                return result.value;
+            }
+            return null;
+        }
+        if (runtimeDeviceSnapshots[deviceid]) {
+            let result = runtimeDeviceSnapshots[deviceid][sigid];
+            if (fully) {
+                return result || null;
             } else if (result) {
                 return result.value;
             }
@@ -333,6 +365,63 @@ function enableDevice(deviceName, enable) {
     } catch (err) {
         console.error(err);
     }
+}
+
+/**
+ * Enable or disable a device only for the current runtime. The project model is
+ * intentionally left unchanged so a save/restart cannot persist a remote
+ * connection in the enabled state.
+ */
+async function setDeviceRuntimeEnabled(deviceName, enable) {
+    const configured = runtime.project.getDevice(deviceName);
+    if (!configured) {
+        throw new Error(`Device '${deviceName}' was not found`);
+    }
+    enable = (typeof enable === 'string') ? enable === 'true' : Boolean(enable);
+    const active = activeDevices[configured.id];
+    if (!enable) {
+        if (active) {
+            const captured = snapshotDeviceValues(active.getValues());
+            await active.stop();
+            delete activeDevices[configured.id];
+            if (Object.keys(captured).length) {
+                runtimeDeviceSnapshots[configured.id] = Object.assign(
+                    {}, runtimeDeviceSnapshots[configured.id] || {}, captured);
+            }
+        }
+        const snapshot = runtimeDeviceSnapshots[configured.id];
+        if (snapshot) {
+            runtime.events.emit('device-value:changed', {
+                id: configured.id,
+                values: snapshot
+            });
+        }
+        runtime.logger.info(`devices.runtime-enable: '${deviceName} - false'`, true);
+        return true;
+    }
+    if (!active) {
+        const runtimeDevice = JSON.parse(JSON.stringify(configured));
+        runtimeDevice.enabled = true;
+        runtimeDevice.runtimeAcquisitionOnce = runtimeDevice.type === 'Kawasaki';
+        if (!devices.loadDevice(runtimeDevice)) {
+            throw new Error(`Device '${deviceName}' could not be loaded`);
+        }
+        activeDevices[configured.id].start();
+    }
+    runtime.logger.info(`devices.runtime-enable: '${deviceName} - true'`, true);
+    return true;
+}
+
+function snapshotDeviceValues(values) {
+    const snapshot = {};
+    Object.entries(values || {}).forEach(([key, tag]) => {
+        if (!tag || tag.value === null || tag.value === undefined) {
+            return;
+        }
+        const id = String(tag.id || key);
+        snapshot[id] = Object.assign({}, tag, { id });
+    });
+    return snapshot;
 }
 
 /**
@@ -566,11 +655,13 @@ var devices = module.exports = {
     getRequestResult: getRequestResult,
     getTagFormat: getTagFormat,
     enableDevice: enableDevice,
+    setDeviceRuntimeEnabled: setDeviceRuntimeEnabled,
     getDevice: getDevice,
     getTagId: getTagId,
     getTagDaqSettings: getTagDaqSettings,
     setTagDaqSettings: setTagDaqSettings,
     getDeviceProperty: getDeviceProperty,
     setDeviceProperty: setDeviceProperty,
-    getHistoricalTags: getHistoricalTags
+    getHistoricalTags: getHistoricalTags,
+    _test: { snapshotDeviceValues: snapshotDeviceValues }
 }
