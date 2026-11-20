@@ -75,9 +75,8 @@ function create(data, logger, events, manager, runtime, injectedSnap7) {
                 for (const [tag, value] of decoded) {
                     const config = data.tags[tag.id], old = values[tag.id];
                     const item = { id: tag.id, value, rawValue: value, type: config.type, quality: 'good',
-                        changed: !old || old.value !== value, timestamp: now, daq: config.daq, tagref: config,
-                        lastDaqSaved:old?.lastDaqSaved };
-                    if (deviceUtils.tagDaqToSave(item, now)) { item.lastDaqSaved=now;daq[tag.id] = item; }
+                        changed: !old || old.value !== value, timestamp: now, daq: config.daq, tagref: config };
+                    if (deviceUtils.tagDaqToSave(item, now)) { item.daq.lastDaqSaved=now;daq[tag.id] = item; }
                     next[tag.id] = item;
                 }
                 values = next;

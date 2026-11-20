@@ -62,7 +62,7 @@ function create(runtime, SQLite) {
     };
     function snapshot(now = Date.now()) {
         const cplc = Object.fromEntries(manifest.tags.map(t => [t.path, get('melissa-cplc', t.id, now)]));
-        const projectDevices = Object.values(runtime.project.getDevices());
+        const projectDevices = Object.values(runtime.project.getDevices() || {});
         const configured = projectDevices.filter(d => scoped(d.id)).map(d => ({ id: d.id, name: d.name,
             enabled: !!d.enabled, status: devices.get(d.id) || 'not-connected',
             lastGood: Math.max(0, ...Array.from(state.entries()).filter(([key]) => key.startsWith(d.id + '/')).map(([,v]) => v.timestamp)) }));
