@@ -1,9 +1,23 @@
 'use strict';
 // CI only: real FUXA with all production devices disabled, plus intercepted synthetic frames.
 const {chromium}=require('playwright'),fs=require('fs'),path=require('path'),assert=require('assert/strict');
+const {spawn}=require('child_process');
+let serverProcess,browser;
 async function main(){
     const out=path.resolve('artifacts/melissa-qa');fs.mkdirSync(out,{recursive:true});
-    const browser=await chromium.launch({headless:true});
+    const packageRoot=process.env.MELISSA_PACKAGE;
+    if(!packageRoot)throw new Error('MELISSA_PACKAGE is required for the isolated Windows test');
+    const log=fs.openSync(path.join(out,'fuxa-runtime.log'),'w');
+    serverProcess=spawn(path.join(packageRoot,'node.exe'),['server/main.js','--userDir',path.join(packageRoot,'data'),'--port','1881'],{cwd:packageRoot,windowsHide:true,stdio:['ignore',log,log]});
+    fs.closeSync(log);
+    let ready=false;
+    for(let attempt=0;attempt<90;attempt++){
+        if(serverProcess.exitCode!==null)throw new Error('Isolated FUXA exited: '+serverProcess.exitCode);
+        try{const r=await fetch('http://127.0.0.1:1881/api/melissa/snapshot');if(r.ok){ready=true;break;}}catch(_){}
+        await new Promise(resolve=>setTimeout(resolve,500));
+    }
+    if(!ready)throw new Error('Isolated FUXA did not become ready');
+    browser=await chromium.launch({headless:true});
     const page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     const snapshot=await (await fetch('http://127.0.0.1:1881/api/melissa/snapshot')).json();
@@ -32,6 +46,8 @@ async function main(){
     await page.screenshot({path:path.join(out,'fuxa-native-home.png'),fullPage:true});
     assert.deepEqual(errors,[]);
     fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({status:'passed',pages:15,productionDevicesEnabled:false,plcValidation:false,syntheticFrameTest:true},null,2));
-    await browser.close();
 }
-main().catch(error=>{console.error(error);process.exit(1);});
+main().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{
+    if(browser)await browser.close();
+    if(serverProcess){serverProcess.kill();await new Promise(resolve=>{if(serverProcess.exitCode!==null)resolve();else serverProcess.once('exit',resolve);});}
+});
