@@ -1,4 +1,10 @@
 :host {
+    ::ng-deep .melissa-navigation {
+        .sidenav-header { height: 65px !important; padding: 10px 14px !important; }
+        .sidenav-submenu-btn { padding-left: 14px !important; padding-right: 10px !important; }
+        .menu-item-content-inline span { white-space: normal; line-height: 1.25; font-size: 14px; }
+        .menu-item-content-inline mat-icon { flex-shrink: 0; width: 18px; height: 18px; font-size: 18px; }
+    }
     .sidenav-title {
         font-size: 17px;
         font-weight: 600;

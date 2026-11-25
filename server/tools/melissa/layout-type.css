@@ -1,0 +1,14 @@
+#melissa-plant-layout .point-label{font-size:14px}
+#melissa-plant-layout .cell-name{font-size:18px}
+#melissa-plant-layout .direction{font-size:11px}
+#melissa-plant-layout .zone-label{font-size:12.5px;letter-spacing:1.5px}
+#melissa-plant-layout .palomat-name{font-size:12.5px!important}
+#melissa-plant-layout .palomat-type{font-size:10.5px;letter-spacing:.3px}
+#melissa-plant-layout .entity-nav-hint{font-size:15px}
+#melissa-plant-layout .buffer-nav>text{font-size:11.5px}
+#melissa-plant-layout .buffer-nav>text[font-weight="600"]{font-size:15px}
+#melissa-plant-layout .semolina-heading text[font-weight="650"]{font-size:14px}
+#melissa-plant-layout .semolina-heading text[font-size="9.5"]{font-size:11.5px}
+#melissa-plant-layout .semolina-station>text{font-size:11.5px}
+#melissa-plant-layout .pickup-control text{font-size:11.5px}
+#melissa-plant-layout .occupancy-marker text{font-size:11px}

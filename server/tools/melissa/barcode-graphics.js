@@ -1,0 +1,3 @@
+'use strict';
+function graphic(){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28" role="img" aria-label="Ετικέτα Barcode"><title>Ετικέτα Barcode</title><path d="M3 1H16L22 7V26Q22 27 21 27H3Q2 27 2 26V2Q2 1 3 1Z" fill="#f8fbfd" stroke="#68869c" stroke-width="1.1"/><path d="M16 1V7H22" fill="#d9e6ef" stroke="#68869c" stroke-width="1.1"/><path d="M5 10v12m2 -12v12m3 -12v12m2 -12v12m3 -12v12m2 -12v12m2 -12v12" fill="none" stroke="#2e4f68" stroke-width="1.1"/><path d="M8 10v12m5 -12v12" stroke="#2e4f68" stroke-width=".55"/><path d="M5 24h4m2 0h3m2 0h3" stroke="#7994a8" stroke-width=".7"/></svg>`;}
+module.exports={graphic};

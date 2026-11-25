@@ -23,20 +23,25 @@ for (const controller of manifest.controllers.filter(c=>c.controller)) {
     }
     devices[id]=device;
 }
-const pages=[['overview','Εγκατάσταση','home'],...[1,2,3,4,5,6].map(n=>['r'+n,'Robot '+n,'precision_manufacturing']),['buffer','AGV buffer','inventory_2'],['sap','SAP','cloud'],['eidos','EIDOS','print'],['wrapper','Wrapper','all_inbox'],['palomats','Palomats','layers'],['diagnostics','Diagnostics','monitor_heart'],['events','Events','history']];
-pages.splice(pages.findIndex(p=>p[0]==='buffer')+1,0,['deliveries','Παραδόσεις JH','task_alt']);
+const pages=[['overview','Εγκατάσταση','home'],...[1,2,3,4,5,6].map(n=>['r'+n,'Robot '+n,'precision_manufacturing']),['semolina','SEMOLINA','inventory'],['buffer','Αναθέσεις στα AGV','inventory_2'],['sap','SAP','cloud'],['eidos','Barcode','qr_code'],['wrapper','Τυλιχτικό','all_inbox'],['palomats','Palomats','layers'],['diagnostics','Diagnostics','monitor_heart'],['events','Events','history']];
+pages.splice(pages.findIndex(p=>p[0]==='buffer')+1,0,['deliveries','Ιστορικό παραδόσεων AGV','task_alt']);
 const views=pages.map(([page,name])=>{
     const id='MELISSA_IFRAME_'+page;
-    return {id:'melissa_'+page,name,type:'svg',profile:{width:1440,height:1050,bkcolor:'#0b1321ff'},variables:{},
+    const width=1740,height=1000;
+    return {id:'melissa_'+page,name,type:'svg',profile:{width,height,bkcolor:'#e9eef3ff'},variables:{},
         items:{[id]:{id,type:'svg-ext-own_ctrl-iframe',name:'Melissa '+name,label:'HtmlIframe',property:{address:'/melissa/?page='+page+'&embed=1'}}},
-        svgcontent:`<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1050"><g id="${id}" type="svg-ext-own_ctrl-iframe"><foreignObject id="D-OXC_${page}" x="0" y="0" width="1440" height="1050"/></g></svg>`};
+        svgcontent:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><g id="${id}" type="svg-ext-own_ctrl-iframe"><foreignObject id="D-OXC_${page}" x="0" y="0" width="${width}" height="${height}"/></g></svg>`};
 });
 const project={version:'1.02',name:'Melissa Central HMI',devices,server:{id:'0',name:'FUXA Server',type:'FuxaServer',property:{},tags:{}},
-    hmi:{views,layout:{start:'melissa_overview',autoresize:true,showdev:true,navigation:{mode:'fix',type:'inline',bkcolor:'#0b1321',fgcolor:'#edf3fa',items:pages.map(([page,text,icon])=>({view:'melissa_'+page,text,icon,link:''}))},header:{}}},alarms:[],texts:[],scripts:[],charts:[]};
+    hmi:{views,layout:{start:'melissa_overview',autoresize:true,zoom:'autoresize',showdev:true,navigation:{mode:'fix',type:'inline',logo:'/melissa/graphics/condor-robotics.svg',bkcolor:'#dfe6ec',fgcolor:'#294455',items:pages.map(([page,text,icon])=>({view:'melissa_'+page,text,icon,link:''}))},header:{bkcolor:'#edf3f7',fgcolor:'#536e81'}}},alarms:[],texts:[],scripts:[],charts:[]};
 fs.writeFileSync(path.join(out,'Melissa_CPLC.fuxap'),JSON.stringify(project,null,2));
 const widgets=path.join(out,'widgets');fs.mkdirSync(widgets,{recursive:true});
 for (const [page,name] of pages) {
-    const svg=`<svg xmlns="http://www.w3.org/2000/svg" id="melissa_${page}_widget" viewBox="0 0 1440 1050"><foreignObject width="1440" height="1050"><iframe xmlns="http://www.w3.org/1999/xhtml" title="${name}" src="/melissa/?page=${page}&amp;embed=1" style="width:1440px;height:1050px;border:0;background:#0b1321"></iframe></foreignObject></svg>`;
+    const width=1740,height=1000;
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" id="melissa_${page}_widget" viewBox="0 0 ${width} ${height}"><foreignObject width="${width}" height="${height}"><iframe xmlns="http://www.w3.org/1999/xhtml" title="${name}" src="/melissa/?page=${page}&amp;embed=1" style="width:${width}px;height:${height}px;border:0;background:#e9eef3"></iframe></foreignObject></svg>`;
     fs.writeFileSync(path.join(widgets,'melissa-'+page+'.svg'),svg);
 }
 console.log('Generated Melissa project: '+views.length+' views / '+Object.values(devices).reduce((n,d)=>n+Object.keys(d.tags).length,0)+' tags. All connections disabled; no network operations.');
+// Share the approved screen colors and typography without shipping preview simulation controls.
+fs.writeFileSync(path.resolve(__dirname,'../../api/melissa/public/approved-theme.css'),
+    ['preview-light.css','preview-type.css'].map(file=>fs.readFileSync(path.join(__dirname,file),'utf8')).join('\n'));

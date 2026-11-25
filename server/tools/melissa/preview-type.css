@@ -1,0 +1,75 @@
+/* Readable operator typography with spacing tuned for 1920x1080. */
+body{font-size:16px}
+.preview-sidebar{padding-top:16px;gap:4px}
+.preview-brand{display:block;padding:0 16px 14px;text-decoration:none;line-height:0}
+.preview-brand svg{display:block;width:148px;height:auto}
+.preview-sidebar button{font-size:14px;height:50px;padding-top:7px;padding-bottom:7px;line-height:1.25}
+.preview-topbar{font-size:12px}
+.preview-topbar .preview-controls label,.preview-controls select,.preview-controls button{font-size:12px}
+.preview-controls{gap:13px}
+body.plant-overview header{padding:12px 28px 10px}
+body.plant-overview h1{font-size:26px}
+body.plant-overview header small{font-size:11px}
+body.plant-overview .badge{font-size:11px}
+body.plant-overview #transport{font-size:12px;padding:7px 12px}
+body.plant-overview main{padding:10px 28px 8px}
+body.plant-overview footer{font-size:11px;padding:9px 28px}
+.plant-toolbar{padding:12px 20px 8px}
+.plant-toolbar h2{font-size:22px}
+.plant-eyebrow{font-size:11px;letter-spacing:1.2px}
+.plant-tools{font-size:12px}.design-pill{font-size:10.5px}
+.plant-legend{font-size:11.5px;padding:8px 20px;gap:20px}
+.endpoint-inspector{padding:12px 20px;min-height:90px;gap:18px}
+.endpoint-identity strong{font-size:22px}
+.endpoint-identity>span:last-child{font-size:12px}
+.endpoint-field>span{font-size:12px}
+.endpoint-field strong,.endpoint-field code{font-size:14px}
+.endpoint-field [data-selected-occupancy]{font-size:11px}
+.endpoint-actions,.endpoint-actions button{font-size:13px}
+.endpoint-actions button{padding:8px 11px}
+.preview-kpi{padding:9px 13px}
+.preview-kpi-label{font-size:13px}
+.preview-kpi-reading strong{font-size:30px;line-height:32px}
+.preview-kpi-reading>span,.preview-kpi small{font-size:11px}
+.preview-breadcrumb{font-size:13px;margin-bottom:14px}
+.preview-breadcrumb button,.preview-tabs button,.preview-action{font-size:14px;padding:9px 13px}
+.preview-status{font-size:13px}
+.preview-card{padding:16px}
+.preview-card h2{font-size:18px;margin-bottom:14px}
+.preview-fields>div{padding:9px 0}
+.preview-fields dt,.preview-fields dd{font-size:14px}
+.preview-card table,.preview-card td{font-size:14px}
+.preview-card th{font-size:12px;padding:8px 12px}
+.preview-card td{padding:9px 12px}
+.preview-empty{font-size:15px}.preview-empty small{font-size:13px}
+.preview-logistics-note{font-size:15px;margin-bottom:16px}
+.preview-palomat-art>span{font-size:13px}
+.plant-menu{width:650px}
+.plant-menu-header{padding:22px 26px 16px}
+.plant-menu-header h2{font-size:28px}
+.plant-menu-title{display:flex;align-items:center;gap:12px;margin-top:7px}
+.plant-menu-title h2{margin:0}
+.plant-menu-title svg,.plant-menu-title img{width:28px;height:33px;flex:none}
+.plant-menu-tabs{padding:16px 26px}
+.plant-menu-tabs button{font-size:14px;padding:10px 15px}
+.plant-menu-row{padding:16px 0}
+.plant-menu-row span,.plant-menu-row strong{font-size:15px}
+.plant-menu-foot{font-size:12px}
+.palomat-menu{width:780px;max-height:90vh;overflow:auto}
+.palomat-unit-selector{display:flex;gap:8px;padding:16px 26px 0}
+.palomat-unit-selector button{flex:1;padding:9px 8px;border:1px solid #adc5d6;border-radius:6px;background:#edf4f9;color:#45647b;font-size:14px}
+.palomat-unit-selector button.selected{background:#cbdfee;border-color:#7199b7;color:#2f5674}
+.palomat-menu-layout{display:grid;grid-template-columns:200px 1fr;gap:28px;padding:0 26px 22px;min-height:265px}
+.palomat-modal-art{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#edf4f9;border:1px solid #bdd1e1;border-radius:9px;padding:12px}
+.palomat-modal-art svg,.palomat-modal-art img{height:206px;width:150px}
+.palomat-modal-art strong{font-size:14px;color:#3c5f79;font-weight:550}
+.palomat-modal-values .plant-menu-row{gap:16px;min-height:62px}
+.semolina-summary article{padding:16px 20px}
+.semolina-summary span{font-size:12px}.semolina-summary strong{font-size:18px}
+.semolina-card{padding:18px}.semolina-card h2{font-size:20px;margin-bottom:16px}
+.semolina-card dl>div{padding:13px 0}
+.semolina-card dt,.semolina-card dd{font-size:14px}
+.semolina-note,.semolina-unavailable,.semolina-floor>span:last-child,.semolina-to-agv span{font-size:13px}
+.semolina-request{font-size:15px;padding:11px}
+.semolina-handshake th{font-size:12px;padding:11px 10px}
+.semolina-handshake td{font-size:14px;padding:11px 10px}

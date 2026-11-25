@@ -20,7 +20,7 @@ function create(runtime, authenticate, verifyGroups) {
         catch(error) { next(error); }
     });
     router.get('/api/melissa/deliveries',async (req,res,next) => {
-        try { res.json({sourceConfigured:false,entries:await runtime.melissa.deliveryHistory()}); }
+        try { res.json({sourceConfigured:false,completionTarget:'wrapper',entries:await runtime.melissa.deliveryHistory()}); }
         catch(error) { next(error); }
     });
     return router;

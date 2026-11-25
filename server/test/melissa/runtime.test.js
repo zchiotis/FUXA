@@ -74,4 +74,13 @@ describe('Melissa event persistence and freshness',function(){
         assert.ok(fs.existsSync(path.join(dir,'melissa-events.db')));
         assert.ok(!rows.some(e=>e.kind==='pallet-delivered'));
     });
+    it('keeps legacy pickup rows separate from the wrapper-delivery ledger',async function(){
+        await service.ready;
+        const db=new (require('sqlite3').Database)(path.join(dir,'melissa-events.db'));
+        await new Promise((resolve,reject)=>db.run('INSERT INTO deliveries(timestamp,station,sscc,source_event_id,evidence) VALUES(?,?,?,?,?)',[1,'R1','0001','legacy-pickup','legacy'],e=>e?reject(e):resolve()));
+        await new Promise(resolve=>db.close(resolve));
+        assert.deepEqual(await service.deliveryHistory(),[]);
+        await service.close();service=create(runtime);await service.ready;
+        assert.deepEqual(await service.deliveryHistory(),[]);
+    });
 });

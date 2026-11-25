@@ -1,0 +1,45 @@
+/* Light drawing surfaces. Equipment artwork, pallets and AGV retain their colors. */
+#melissa-plant-layout{background:#f7f9fb;color:#2b3f4e}
+#melissa-plant-layout>rect[width="1600"]{fill:#f7f9fb}
+#melissa-plant-layout .plant-wall{stroke:#a1b1bd}
+#melissa-plant-layout .machine-line{stroke:#748b9a}
+#melissa-plant-layout .conveyor{fill:#e1e8ed;stroke:#8196a5}
+#melissa-plant-layout .roller{stroke:#a1b1bd}
+#melissa-plant-layout .robot-arm{fill:#a3b4c0;stroke:#566e7f}
+#melissa-plant-layout .robot-arm circle{fill:#edf3f7}
+#melissa-plant-layout .point-label,#melissa-plant-layout .cell-name{fill:#2b4353}
+#melissa-plant-layout .zone-label,#melissa-plant-layout .equipment-name,#melissa-plant-layout .schematic-note{fill:#526c7f}
+#melissa-plant-layout .cell-tag{fill:#edf3f7;stroke:#a3b5c2}
+#melissa-plant-layout .cell-nav:hover .cell-tag,#melissa-plant-layout .cell-nav:focus .cell-tag{fill:#dce8f0;stroke:#5f8198}
+#melissa-plant-layout .entity-button .entity-surface{fill:#edf3f7;stroke:#a6b8c5}
+#melissa-plant-layout .entity-button:hover .entity-surface,#melissa-plant-layout .entity-button:focus .entity-surface{fill:#e0ebf3;stroke:#65859a}
+#melissa-plant-layout .entity-status circle{fill:#f9fbfd;stroke:#8da2b1}
+#melissa-plant-layout .entity-status path{stroke:#617b8d}
+#melissa-plant-layout .entity-nav-hint{fill:#526c7f}
+#melissa-plant-layout .palomat-name{fill:#2f4758}
+#melissa-plant-layout .palomat-type{fill:#526c7f}
+#melissa-plant-layout .buffer-nav>text{fill:#526c7f}
+#melissa-plant-layout .buffer-nav>text[font-weight="600"]{fill:#2d4556}
+#melissa-plant-layout .buffer-nav>path{stroke:#809aab}
+#melissa-plant-layout .endpoint-hit{fill:#edf3f7;stroke:#9eb3c2}
+#melissa-plant-layout .arrow-lamp{fill:#d3dfe8;stroke:#6f899b}
+#melissa-plant-layout .direction{fill:#4d6a7f}
+#melissa-plant-layout .selection-mark{stroke:#345a73}
+#melissa-plant-layout .endpoint:hover .endpoint-hit{fill:#e1edf4;stroke:#5b809a}
+#melissa-plant-layout .endpoint.is-lit .arrow-lamp,#melissa-plant-layout .endpoint.is-requested .arrow-lamp{fill:#365f79;stroke:#24465d}
+#melissa-plant-layout .endpoint.is-lit .direction,#melissa-plant-layout .endpoint.is-requested .direction{fill:#244b65}
+#melissa-plant-layout .semolina-station>rect{fill:#edf3f7;stroke:#9eafbd}
+#melissa-plant-layout .semolina-heading text,#melissa-plant-layout .semolina-station>text{fill:#304d61}
+#melissa-plant-layout .semolina-heading text[font-size="9.5"]{fill:#526c7f}
+#melissa-plant-layout .semolina-station>g[data-open-page] path{stroke:#8fa6b7}
+#melissa-plant-layout .semolina-station>g[data-open-page] path:first-child{fill:#e2ebf2}
+#melissa-plant-layout .pickup-control rect{fill:#d4e2ed;stroke:#8ba5b8}
+#melissa-plant-layout .pickup-control text{fill:#294d67}
+#melissa-plant-layout .pickup-control[aria-disabled="false"]:hover rect,#melissa-plant-layout .pickup-control[aria-disabled="false"]:focus rect{fill:#bcd3e3;stroke:#527b98}
+#melissa-plant-layout .occupancy-marker circle{fill:#f1f6fa;stroke:#91a7b8}
+#melissa-plant-layout .occupancy-marker text{fill:#486b83}
+#melissa-plant-layout .menu-endpoint .menu-hit{fill:#edf3f7;stroke:#9fb3c2}
+#melissa-plant-layout .menu-endpoint .menu-point{fill:#d5e3ec;stroke:#7d9aae}
+#melissa-plant-layout .menu-endpoint>circle:not(.menu-point){fill:#5d7d93}
+#melissa-plant-layout .cell-equipment[data-cell="wrapper"]>path[stroke-width="22"]{stroke:#859aa9}
+#melissa-plant-layout .cell-equipment[data-cell="wrapper"]>path[stroke-width="17"]{stroke:#e1e9ef}

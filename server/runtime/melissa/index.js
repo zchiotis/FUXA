@@ -14,7 +14,10 @@ function create(runtime, SQLite) {
     const all = (sql, params = []) => new Promise((resolve, reject) => db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows)));
     const ready = run('PRAGMA journal_mode=WAL').then(() => run('CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER NOT NULL, device TEXT, kind TEXT NOT NULL, tag TEXT, value TEXT, previous TEXT)'))
         .then(() => run('CREATE INDEX IF NOT EXISTS event_time ON events(timestamp,id)'))
-        .then(() => run('CREATE TABLE IF NOT EXISTS deliveries (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER NOT NULL, station TEXT NOT NULL, sscc TEXT NOT NULL, pallet_type INTEGER, source_event_id TEXT UNIQUE NOT NULL, evidence TEXT NOT NULL)'));
+        .then(() => run('CREATE TABLE IF NOT EXISTS deliveries (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER NOT NULL, station TEXT NOT NULL, sscc TEXT NOT NULL, pallet_type INTEGER, source_event_id TEXT UNIQUE NOT NULL, evidence TEXT NOT NULL)'))
+        // A distinct ledger prevents legacy pickup records being relabelled as wrapper deliveries.
+        // No automatic writer until the wrapper completion source and correlation are verified.
+        .then(() => run('CREATE TABLE IF NOT EXISTS wrapper_deliveries (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER NOT NULL, station TEXT NOT NULL, sscc TEXT NOT NULL, pallet_type INTEGER, source_event_id TEXT UNIQUE NOT NULL, evidence TEXT NOT NULL)'));
     let queue = ready.catch(error => { loggingError = error.message; runtime.logger.error('Melissa event DB: ' + error.message); });
     const record = (kind, device, tag = null, value = null, previous = null) => {
         if (closed) return;
@@ -117,7 +120,7 @@ function create(runtime, SQLite) {
             await queue;
             return all('SELECT * FROM events WHERE id < ? ORDER BY id DESC LIMIT ?', [Number(before)||Number.MAX_SAFE_INTEGER,Math.min(Math.max(Number(limit)||200,1),1000)]);
         },
-        deliveryHistory: async () => { await queue;return all('SELECT * FROM deliveries ORDER BY id DESC LIMIT 500'); },
+        deliveryHistory: async () => { await queue;return all('SELECT * FROM wrapper_deliveries ORDER BY id DESC LIMIT 500'); },
         close: async () => { clearInterval(timer);runtime.events.off('device-value:changed',onValues);runtime.events.off('device-status:changed',onStatus);runtime.events.off('alarms-status:changed',onAlarm);closed=true;await queue;await new Promise((resolve,reject)=>db.close(e=>e?reject(e):resolve())); }
     };
 }

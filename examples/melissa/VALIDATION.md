@@ -15,7 +15,9 @@
 - API authorization checks,
 - πραγματικό Angular compile,
 - isolated FUXA smoke test με όλες τις production συσκευές disabled,
-- browser checks και screenshots για 15 οθόνες, synthetic sample και απώλεια επικοινωνίας, καθώς και native FUXA home embedding.
+- browser checks και screenshots για 16 οθόνες, synthetic sample και απώλεια επικοινωνίας, καθώς και native FUXA home embedding,
+- αναβάθμιση artwork με διατήρηση ενεργοποιημένων συσκευών, credentials, custom views, ρυθμίσεων και ιστορικού· επανάληψη χωρίς νέες αλλαγές,
+- πέντε Palomat modals, περιστροφή με όρθια γράμματα, fitting overview σε 1920×1080, νέα ιστορική σημασία παράδοσης στο Τυλιχτικό χωρίς επανερμηνεία παλιών εγγραφών.
 
 Η κατάσταση κάθε run και τα screenshots είναι τα πρωτογενή τεκμήρια. Το έγγραφο δεν δηλώνει εκ των προτέρων επιτυχία. Τα δοκιμαστικά δεδομένα CI αφαιρούνται από το portable package. Το runtime δεν περιλαμβάνει simulator ή demo telemetry.
 

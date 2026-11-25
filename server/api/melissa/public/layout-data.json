@@ -1,0 +1,968 @@
+{
+  "version": "0.3.2",
+  "width": 1600,
+  "height": 560,
+  "targetScreen": {
+    "width": 1920,
+    "height": 1080
+  },
+  "source": "Factory layout PDF supplied 2026-11-22",
+  "wrapperConfirmed": true,
+  "signalBindings": {
+    "occupied": "read-only-offline-mapped",
+    "requestArrows": false,
+    "semolina": false
+  },
+  "plcValidation": false,
+  "futureCommand": "AGVRequest",
+  "cells": [
+    {
+      "id": "r6",
+      "name": "Robot 6"
+    },
+    {
+      "id": "r1",
+      "name": "Robot 1"
+    },
+    {
+      "id": "r4",
+      "name": "Robot 4"
+    },
+    {
+      "id": "r2",
+      "name": "Robot 2"
+    },
+    {
+      "id": "r3",
+      "name": "Robot 3"
+    },
+    {
+      "id": "r5",
+      "name": "Robot 5"
+    },
+    {
+      "id": "wrapper",
+      "name": "Τυλιχτικό"
+    }
+  ],
+  "logistics": {
+    "definitionSource": "user-confirmed",
+    "assignments": {
+      "page": "buffer",
+      "label": "Αναθέσεις στα AGV",
+      "sourceDB": "AGVBuffer_DB",
+      "meaning": "handed-to-agv-awaiting-wrapper-delivery"
+    },
+    "deliveries": {
+      "page": "deliveries",
+      "label": "Ιστορικό παραδόσεων AGV",
+      "completionTarget": "wrapper",
+      "meaning": "every-pallet-delivered-to-wrapper",
+      "eventBinding": null
+    },
+    "illustration": {
+      "palletCount": 5,
+      "agvCount": 1,
+      "indicative": true
+    }
+  },
+  "outfeeds": [
+    {
+      "id": "r6-3-out",
+      "station": "R6-3-OUT",
+      "cell": "r6",
+      "x": 130,
+      "y": 278,
+      "occupiedBinding": {
+        "path": "R6-3-OUT.Occupied",
+        "tagId": "db100.R6-3-OUT.Occupied",
+        "db": 100,
+        "byte": 768,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r6-2-out",
+      "station": "R6-2-OUT",
+      "cell": "r6",
+      "x": 176,
+      "y": 278,
+      "occupiedBinding": {
+        "path": "R6-2-OUT.Occupied",
+        "tagId": "db100.R6-2-OUT.Occupied",
+        "db": 100,
+        "byte": 744,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r1-5-out",
+      "station": "R1-5-OUT",
+      "cell": "r1",
+      "x": 310,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R1-5-OUT.Occupied",
+        "tagId": "db100.R1-5-OUT.Occupied",
+        "db": 100,
+        "byte": 192,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r1-4-out",
+      "station": "R1-4-OUT",
+      "cell": "r1",
+      "x": 368,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R1-4-OUT.Occupied",
+        "tagId": "db100.R1-4-OUT.Occupied",
+        "db": 100,
+        "byte": 144,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r1-3-out",
+      "station": "R1-3-OUT",
+      "cell": "r1",
+      "x": 426,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R1-3-OUT.Occupied",
+        "tagId": "db100.R1-3-OUT.Occupied",
+        "db": 100,
+        "byte": 96,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r1-2-out",
+      "station": "R1-2OUT",
+      "cell": "r1",
+      "x": 484,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R1-2OUT.Occupied",
+        "tagId": "db100.R1-2OUT.Occupied",
+        "db": 100,
+        "byte": 48,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r1-1-out",
+      "station": "R1-1OUT",
+      "cell": "r1",
+      "x": 542,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R1-1OUT.Occupied",
+        "tagId": "db100.R1-1OUT.Occupied",
+        "db": 100,
+        "byte": 0,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r4-1-out",
+      "station": "R4-1-OUT",
+      "cell": "r4",
+      "x": 638,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R4-1-OUT.Occupied",
+        "tagId": "db100.R4-1-OUT.Occupied",
+        "db": 100,
+        "byte": 528,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r2-3-out",
+      "station": "R2-3-OUT",
+      "cell": "r2",
+      "x": 728,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R2-3-OUT.Occupied",
+        "tagId": "db100.R2-3-OUT.Occupied",
+        "db": 100,
+        "byte": 336,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r2-2-out",
+      "station": "R2-2-OUT",
+      "cell": "r2",
+      "x": 790,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R2-2-OUT.Occupied",
+        "tagId": "db100.R2-2-OUT.Occupied",
+        "db": 100,
+        "byte": 288,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r2-1-out",
+      "station": "R2-1-OUT",
+      "cell": "r2",
+      "x": 852,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R2-1-OUT.Occupied",
+        "tagId": "db100.R2-1-OUT.Occupied",
+        "db": 100,
+        "byte": 240,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r3-3-out",
+      "station": "R3-3-OUT",
+      "cell": "r3",
+      "x": 956,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R3-3-OUT.Occupied",
+        "tagId": "db100.R3-3-OUT.Occupied",
+        "db": 100,
+        "byte": 480,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r3-2-out",
+      "station": "R3-2-OUT",
+      "cell": "r3",
+      "x": 1018,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R3-2-OUT.Occupied",
+        "tagId": "db100.R3-2-OUT.Occupied",
+        "db": 100,
+        "byte": 432,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r3-1-out",
+      "station": "R3-1-OUT",
+      "cell": "r3",
+      "x": 1080,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R3-1-OUT.Occupied",
+        "tagId": "db100.R3-1-OUT.Occupied",
+        "db": 100,
+        "byte": 384,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r5-3-out",
+      "station": "R5-3-OUT",
+      "cell": "r5",
+      "x": 1174,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R5-3-OUT.Occupied",
+        "tagId": "db100.R5-3-OUT.Occupied",
+        "db": 100,
+        "byte": 672,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r5-2-out",
+      "station": "R5-2-OUT",
+      "cell": "r5",
+      "x": 1236,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R5-2-OUT.Occupied",
+        "tagId": "db100.R5-2-OUT.Occupied",
+        "db": 100,
+        "byte": 624,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    },
+    {
+      "id": "r5-1-out",
+      "station": "R5-1-OUT",
+      "cell": "r5",
+      "x": 1298,
+      "y": 324,
+      "occupiedBinding": {
+        "path": "R5-1-OUT.Occupied",
+        "tagId": "db100.R5-1-OUT.Occupied",
+        "db": 100,
+        "byte": 576,
+        "bit": 1,
+        "access": "read",
+        "verification": "offline-manifest-only"
+      }
+    }
+  ],
+  "manualStations": [
+    {
+      "id": "semolina",
+      "name": "SEMOLINA",
+      "description": "Σιμιγδάλι",
+      "endpoint": "semolina-out",
+      "direction": "OUT",
+      "target": "AGV",
+      "requestSources": [
+        "physical-button",
+        "hmi-button"
+      ],
+      "sapDataBinding": null,
+      "occupiedBinding": null,
+      "requestBinding": null,
+      "commandBinding": null
+    }
+  ],
+  "palomats": [
+    {
+      "number": 5,
+      "column": 0,
+      "palletFamily": "INDU",
+      "palletName": "INDU pallet",
+      "graphic": "graphics/palomats/palomat-indu.svg",
+      "plcPalletType": null
+    },
+    {
+      "number": 4,
+      "column": 1,
+      "palletFamily": "EUR_STD",
+      "palletName": "EUR pallet STD",
+      "graphic": "graphics/palomats/palomat-eur-std.svg",
+      "plcPalletType": null
+    },
+    {
+      "number": 3,
+      "column": 2,
+      "palletFamily": "EUR_STD",
+      "palletName": "EUR pallet STD",
+      "graphic": "graphics/palomats/palomat-eur-std.svg",
+      "plcPalletType": null
+    },
+    {
+      "number": 2,
+      "column": 3,
+      "palletFamily": "EUR_BLUE",
+      "palletName": "EUR pallet Blue",
+      "graphic": "graphics/palomats/palomat-eur-blue.svg",
+      "plcPalletType": null
+    },
+    {
+      "number": 1,
+      "column": 4,
+      "palletFamily": "EUR_BLUE",
+      "palletName": "EUR pallet Blue",
+      "graphic": "graphics/palomats/palomat-eur-blue.svg",
+      "plcPalletType": null
+    }
+  ],
+  "entities": [
+    {
+      "id": "r6",
+      "name": "Robot 6",
+      "page": "r6",
+      "kind": "cell",
+      "statusBinding": null
+    },
+    {
+      "id": "r1",
+      "name": "Robot 1",
+      "page": "r1",
+      "kind": "cell",
+      "statusBinding": null
+    },
+    {
+      "id": "r4",
+      "name": "Robot 4",
+      "page": "r4",
+      "kind": "cell",
+      "statusBinding": null
+    },
+    {
+      "id": "r2",
+      "name": "Robot 2",
+      "page": "r2",
+      "kind": "cell",
+      "statusBinding": null
+    },
+    {
+      "id": "r3",
+      "name": "Robot 3",
+      "page": "r3",
+      "kind": "cell",
+      "statusBinding": null
+    },
+    {
+      "id": "r5",
+      "name": "Robot 5",
+      "page": "r5",
+      "kind": "cell",
+      "statusBinding": null
+    },
+    {
+      "id": "wrapper",
+      "name": "Τυλιχτικό",
+      "page": "wrapper",
+      "kind": "cell",
+      "statusBinding": null
+    },
+    {
+      "id": "agv-assignments",
+      "name": "Αναθέσεις στα AGV",
+      "page": "buffer",
+      "kind": "assignments",
+      "statusBinding": null
+    },
+    {
+      "id": "palomat-5",
+      "name": "Palomat 5",
+      "page": "palomats",
+      "selection": "5",
+      "kind": "palomat",
+      "palletFamily": "INDU",
+      "statusBinding": null
+    },
+    {
+      "id": "palomat-4",
+      "name": "Palomat 4",
+      "page": "palomats",
+      "selection": "4",
+      "kind": "palomat",
+      "palletFamily": "EUR_STD",
+      "statusBinding": null
+    },
+    {
+      "id": "palomat-3",
+      "name": "Palomat 3",
+      "page": "palomats",
+      "selection": "3",
+      "kind": "palomat",
+      "palletFamily": "EUR_STD",
+      "statusBinding": null
+    },
+    {
+      "id": "palomat-2",
+      "name": "Palomat 2",
+      "page": "palomats",
+      "selection": "2",
+      "kind": "palomat",
+      "palletFamily": "EUR_BLUE",
+      "statusBinding": null
+    },
+    {
+      "id": "palomat-1",
+      "name": "Palomat 1",
+      "page": "palomats",
+      "selection": "1",
+      "kind": "palomat",
+      "palletFamily": "EUR_BLUE",
+      "statusBinding": null
+    },
+    {
+      "id": "eidos",
+      "name": "Barcode",
+      "page": "eidos",
+      "kind": "printer",
+      "statusBinding": null
+    },
+    {
+      "id": "semolina",
+      "name": "SEMOLINA",
+      "page": "semolina",
+      "kind": "manual-station",
+      "statusBinding": null
+    }
+  ],
+  "endpoints": [
+    {
+      "id": "semolina-out",
+      "label": "SEMOLINA · OUT",
+      "point": "SEMOLINA",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "semolina",
+      "cellName": "SEMOLINA (Σιμιγδάλι)",
+      "x": 184,
+      "y": 101,
+      "flow": "to-agv",
+      "binding": null
+    },
+    {
+      "id": "r6-4-in",
+      "label": "R6-4 · IN",
+      "point": "R6-4",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r6",
+      "cellName": "Robot 6",
+      "x": 84,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r6-3-out",
+      "label": "R6-3 · OUT",
+      "point": "R6-3",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r6",
+      "cellName": "Robot 6",
+      "x": 130,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r6-2-out",
+      "label": "R6-2 · OUT",
+      "point": "R6-2",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r6",
+      "cellName": "Robot 6",
+      "x": 176,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r6-1-in",
+      "label": "R6-1 · IN",
+      "point": "R6-1",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r6",
+      "cellName": "Robot 6",
+      "x": 222,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r1-5-out",
+      "label": "R1-5 · OUT",
+      "point": "R1-5",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r1",
+      "cellName": "Robot 1",
+      "x": 310,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r1-5-in",
+      "label": "R1-5 · IN",
+      "point": "R1-5",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r1",
+      "cellName": "Robot 1",
+      "x": 310,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r1-4-out",
+      "label": "R1-4 · OUT",
+      "point": "R1-4",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r1",
+      "cellName": "Robot 1",
+      "x": 368,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r1-4-in",
+      "label": "R1-4 · IN",
+      "point": "R1-4",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r1",
+      "cellName": "Robot 1",
+      "x": 368,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r1-3-out",
+      "label": "R1-3 · OUT",
+      "point": "R1-3",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r1",
+      "cellName": "Robot 1",
+      "x": 426,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r1-3-in",
+      "label": "R1-3 · IN",
+      "point": "R1-3",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r1",
+      "cellName": "Robot 1",
+      "x": 426,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r1-2-out",
+      "label": "R1-2 · OUT",
+      "point": "R1-2",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r1",
+      "cellName": "Robot 1",
+      "x": 484,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r1-2-in",
+      "label": "R1-2 · IN",
+      "point": "R1-2",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r1",
+      "cellName": "Robot 1",
+      "x": 484,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r1-1-out",
+      "label": "R1-1 · OUT",
+      "point": "R1-1",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r1",
+      "cellName": "Robot 1",
+      "x": 542,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r1-1-in",
+      "label": "R1-1 · IN",
+      "point": "R1-1",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r1",
+      "cellName": "Robot 1",
+      "x": 542,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r4-1-out",
+      "label": "R4-1 · OUT",
+      "point": "R4-1",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r4",
+      "cellName": "Robot 4",
+      "x": 638,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r4-1-in",
+      "label": "R4-1 · IN",
+      "point": "R4-1",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r4",
+      "cellName": "Robot 4",
+      "x": 638,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r2-3-out",
+      "label": "R2-3 · OUT",
+      "point": "R2-3",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r2",
+      "cellName": "Robot 2",
+      "x": 728,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r2-3-in",
+      "label": "R2-3 · IN",
+      "point": "R2-3",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r2",
+      "cellName": "Robot 2",
+      "x": 728,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r2-2-out",
+      "label": "R2-2 · OUT",
+      "point": "R2-2",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r2",
+      "cellName": "Robot 2",
+      "x": 790,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r2-2-in",
+      "label": "R2-2 · IN",
+      "point": "R2-2",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r2",
+      "cellName": "Robot 2",
+      "x": 790,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r2-1-out",
+      "label": "R2-1 · OUT",
+      "point": "R2-1",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r2",
+      "cellName": "Robot 2",
+      "x": 852,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r2-1-in",
+      "label": "R2-1 · IN",
+      "point": "R2-1",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r2",
+      "cellName": "Robot 2",
+      "x": 852,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r3-3-out",
+      "label": "R3-3 · OUT",
+      "point": "R3-3",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r3",
+      "cellName": "Robot 3",
+      "x": 956,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r3-3-in",
+      "label": "R3-3 · IN",
+      "point": "R3-3",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r3",
+      "cellName": "Robot 3",
+      "x": 956,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r3-2-out",
+      "label": "R3-2 · OUT",
+      "point": "R3-2",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r3",
+      "cellName": "Robot 3",
+      "x": 1018,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r3-2-in",
+      "label": "R3-2 · IN",
+      "point": "R3-2",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r3",
+      "cellName": "Robot 3",
+      "x": 1018,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r3-1-out",
+      "label": "R3-1 · OUT",
+      "point": "R3-1",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r3",
+      "cellName": "Robot 3",
+      "x": 1080,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r3-1-in",
+      "label": "R3-1 · IN",
+      "point": "R3-1",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r3",
+      "cellName": "Robot 3",
+      "x": 1080,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r5-3-out",
+      "label": "R5-3 · OUT",
+      "point": "R5-3",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r5",
+      "cellName": "Robot 5",
+      "x": 1174,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r5-3-in",
+      "label": "R5-3 · IN",
+      "point": "R5-3",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r5",
+      "cellName": "Robot 5",
+      "x": 1174,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r5-2-out",
+      "label": "R5-2 · OUT",
+      "point": "R5-2",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r5",
+      "cellName": "Robot 5",
+      "x": 1236,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r5-2-in",
+      "label": "R5-2 · IN",
+      "point": "R5-2",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r5",
+      "cellName": "Robot 5",
+      "x": 1236,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "r5-1-out",
+      "label": "R5-1 · OUT",
+      "point": "R5-1",
+      "direction": "OUT",
+      "kind": "arrow",
+      "cell": "r5",
+      "cellName": "Robot 5",
+      "x": 1298,
+      "y": 232,
+      "binding": null
+    },
+    {
+      "id": "r5-1-in",
+      "label": "R5-1 · IN",
+      "point": "R5-1",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "r5",
+      "cellName": "Robot 5",
+      "x": 1298,
+      "y": 283,
+      "binding": null
+    },
+    {
+      "id": "wrap-in",
+      "label": "WRAP-IN",
+      "point": "WRAP-IN",
+      "direction": "IN",
+      "kind": "arrow",
+      "cell": "wrapper",
+      "cellName": "Τυλιχτικό",
+      "x": 1465,
+      "y": 226,
+      "binding": null
+    },
+    {
+      "id": "eidos-menu",
+      "label": "Barcode",
+      "point": "Barcode",
+      "direction": null,
+      "kind": "menu",
+      "target": "eidos",
+      "cell": "eidos",
+      "cellName": "Τυλιχτικό",
+      "x": 1465,
+      "y": 427,
+      "binding": null
+    }
+  ]
+}

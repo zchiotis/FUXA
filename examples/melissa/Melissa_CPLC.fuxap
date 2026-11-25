@@ -11703,9 +11703,9 @@
         "name": "Εγκατάσταση",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
@@ -11719,16 +11719,16 @@
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_overview\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_overview\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_overview\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_overview\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_r1",
         "name": "Robot 1",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
@@ -11742,16 +11742,16 @@
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_r1\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r1\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_r1\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r1\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_r2",
         "name": "Robot 2",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
@@ -11765,16 +11765,16 @@
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_r2\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r2\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_r2\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r2\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_r3",
         "name": "Robot 3",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
@@ -11788,16 +11788,16 @@
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_r3\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r3\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_r3\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r3\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_r4",
         "name": "Robot 4",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
@@ -11811,16 +11811,16 @@
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_r4\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r4\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_r4\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r4\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_r5",
         "name": "Robot 5",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
@@ -11834,16 +11834,16 @@
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_r5\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r5\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_r5\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r5\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_r6",
         "name": "Robot 6",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
@@ -11857,62 +11857,85 @@
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_r6\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r6\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_r6\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_r6\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
+      },
+      {
+        "id": "melissa_semolina",
+        "name": "SEMOLINA",
+        "type": "svg",
+        "profile": {
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
+        },
+        "variables": {},
+        "items": {
+          "MELISSA_IFRAME_semolina": {
+            "id": "MELISSA_IFRAME_semolina",
+            "type": "svg-ext-own_ctrl-iframe",
+            "name": "Melissa SEMOLINA",
+            "label": "HtmlIframe",
+            "property": {
+              "address": "/melissa/?page=semolina&embed=1"
+            }
+          }
+        },
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_semolina\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_semolina\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_buffer",
-        "name": "AGV buffer",
+        "name": "Αναθέσεις στα AGV",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
           "MELISSA_IFRAME_buffer": {
             "id": "MELISSA_IFRAME_buffer",
             "type": "svg-ext-own_ctrl-iframe",
-            "name": "Melissa AGV buffer",
+            "name": "Melissa Αναθέσεις στα AGV",
             "label": "HtmlIframe",
             "property": {
               "address": "/melissa/?page=buffer&embed=1"
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_buffer\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_buffer\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_buffer\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_buffer\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_deliveries",
-        "name": "Παραδόσεις JH",
+        "name": "Ιστορικό παραδόσεων AGV",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
           "MELISSA_IFRAME_deliveries": {
             "id": "MELISSA_IFRAME_deliveries",
             "type": "svg-ext-own_ctrl-iframe",
-            "name": "Melissa Παραδόσεις JH",
+            "name": "Melissa Ιστορικό παραδόσεων AGV",
             "label": "HtmlIframe",
             "property": {
               "address": "/melissa/?page=deliveries&embed=1"
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_deliveries\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_deliveries\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_deliveries\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_deliveries\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_sap",
         "name": "SAP",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
@@ -11926,62 +11949,62 @@
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_sap\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_sap\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_sap\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_sap\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_eidos",
-        "name": "EIDOS",
+        "name": "Barcode",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
           "MELISSA_IFRAME_eidos": {
             "id": "MELISSA_IFRAME_eidos",
             "type": "svg-ext-own_ctrl-iframe",
-            "name": "Melissa EIDOS",
+            "name": "Melissa Barcode",
             "label": "HtmlIframe",
             "property": {
               "address": "/melissa/?page=eidos&embed=1"
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_eidos\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_eidos\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_eidos\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_eidos\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_wrapper",
-        "name": "Wrapper",
+        "name": "Τυλιχτικό",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
           "MELISSA_IFRAME_wrapper": {
             "id": "MELISSA_IFRAME_wrapper",
             "type": "svg-ext-own_ctrl-iframe",
-            "name": "Melissa Wrapper",
+            "name": "Melissa Τυλιχτικό",
             "label": "HtmlIframe",
             "property": {
               "address": "/melissa/?page=wrapper&embed=1"
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_wrapper\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_wrapper\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_wrapper\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_wrapper\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_palomats",
         "name": "Palomats",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
@@ -11995,16 +12018,16 @@
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_palomats\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_palomats\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_palomats\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_palomats\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_diagnostics",
         "name": "Diagnostics",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
@@ -12018,16 +12041,16 @@
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_diagnostics\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_diagnostics\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_diagnostics\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_diagnostics\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       },
       {
         "id": "melissa_events",
         "name": "Events",
         "type": "svg",
         "profile": {
-          "width": 1440,
-          "height": 1050,
-          "bkcolor": "#0b1321ff"
+          "width": 1740,
+          "height": 1000,
+          "bkcolor": "#e9eef3ff"
         },
         "variables": {},
         "items": {
@@ -12041,18 +12064,20 @@
             }
           }
         },
-        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1440\" height=\"1050\"><g id=\"MELISSA_IFRAME_events\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_events\" x=\"0\" y=\"0\" width=\"1440\" height=\"1050\"/></g></svg>"
+        "svgcontent": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1740\" height=\"1000\"><g id=\"MELISSA_IFRAME_events\" type=\"svg-ext-own_ctrl-iframe\"><foreignObject id=\"D-OXC_events\" x=\"0\" y=\"0\" width=\"1740\" height=\"1000\"/></g></svg>"
       }
     ],
     "layout": {
       "start": "melissa_overview",
       "autoresize": true,
+      "zoom": "autoresize",
       "showdev": true,
       "navigation": {
         "mode": "fix",
         "type": "inline",
-        "bkcolor": "#0b1321",
-        "fgcolor": "#edf3fa",
+        "logo": "/melissa/graphics/condor-robotics.svg",
+        "bkcolor": "#dfe6ec",
+        "fgcolor": "#294455",
         "items": [
           {
             "view": "melissa_overview",
@@ -12097,14 +12122,20 @@
             "link": ""
           },
           {
+            "view": "melissa_semolina",
+            "text": "SEMOLINA",
+            "icon": "inventory",
+            "link": ""
+          },
+          {
             "view": "melissa_buffer",
-            "text": "AGV buffer",
+            "text": "Αναθέσεις στα AGV",
             "icon": "inventory_2",
             "link": ""
           },
           {
             "view": "melissa_deliveries",
-            "text": "Παραδόσεις JH",
+            "text": "Ιστορικό παραδόσεων AGV",
             "icon": "task_alt",
             "link": ""
           },
@@ -12116,13 +12147,13 @@
           },
           {
             "view": "melissa_eidos",
-            "text": "EIDOS",
-            "icon": "print",
+            "text": "Barcode",
+            "icon": "qr_code",
             "link": ""
           },
           {
             "view": "melissa_wrapper",
-            "text": "Wrapper",
+            "text": "Τυλιχτικό",
             "icon": "all_inbox",
             "link": ""
           },
@@ -12146,7 +12177,10 @@
           }
         ]
       },
-      "header": {}
+      "header": {
+        "bkcolor": "#edf3f7",
+        "fgcolor": "#536e81"
+      }
     }
   },
   "alarms": [],

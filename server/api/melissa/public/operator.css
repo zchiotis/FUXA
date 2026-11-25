@@ -1,0 +1,33 @@
+/* Packaged operator shell. The approved drawing and palette are shared with the preview. */
+[hidden]{display:none!important}
+body{--bg:#e9eef3;--panel:#fff;--border:#b8c7d2;--text:#2a4050;--muted:#526c7f;--accent:#356a64;--warning:#8b682f;--bad:#a34249}
+body:not(.embed){padding-left:180px}
+body:not(.embed) nav{display:flex;position:fixed;left:0;top:0;bottom:0;width:180px;flex-direction:column;flex-wrap:nowrap;gap:3px;padding:16px 0;background:#dfe6ec;border-right:1px solid #b5c4cf;overflow:auto}
+nav .brand{display:block;padding:0 16px 15px;line-height:0;border:0;background:transparent}nav .brand img{width:148px;height:auto}
+nav a{border:0;border-radius:0;background:transparent;font-size:14px;min-height:47px;padding:11px 15px;line-height:1.3}
+nav a.active{border-left:3px solid #507992;background:#cbdce8!important;color:#25475e!important;padding-left:12px}
+nav a:hover{background:#d1e0eb}
+header.has-overview-kpis{display:grid;grid-template-columns:210px minmax(560px,690px) 1fr;gap:20px}
+.header-meta{min-width:160px}.header-meta time{color:#526c7f;font-size:12px}
+body.plant-overview #transport.good{background:#e0ebf4;color:#4d6c82}
+body.plant-overview #transport.bad{background:#f8e3e4;color:#a34249;border-color:#dca0a5}
+.card{margin:14px 0;padding:18px;background:#fff;color:#2a4050;border-color:#b7c9d6}
+.card h2{font-size:20px;color:#2e4a60;margin-bottom:14px}.card table{font-size:14px}.card th{font-size:12px;background:#f1f6fa;color:#526c7f}.card td{border-color:#d5e0e9;padding:10px}
+.card code{font-size:13px}.card dt{font-size:13px}.card dd{font-size:15px}
+.notice{background:#f5f0e5;color:#715c34;border-color:#b69960;font-size:14px;padding:10px 14px;line-height:1.5;margin:12px 0}
+.quality-note{font-size:12px}.badge{font-size:11px}.good{color:#28745b}.unknown,.stale{color:#8b682f}.bad{color:#a34249}
+button{background:#e0ecf5;border-color:#a8c0d2;color:#355c79}.chips a{color:#355c79;font-size:14px}
+.grid{margin:12px 0}.grid>.card{margin:0}.operator-back{display:inline-block;color:#355c79;text-decoration:none;font-size:14px;margin:3px 0 8px}
+.layout-rotation{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px}
+#plant-design.layout-rotated [data-layout-drawing]>svg{transform:rotate(180deg);transform-origin:center center}
+.plant-tools{gap:15px}.plant-toolbar .design-pill{display:none}
+/* Fit the native FUXA iframe as well as the standalone 1080p page, without scrolling. */
+body.page-overview{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.page-overview>header,.page-overview>#transport,.page-overview>footer{flex-shrink:0}
+body.page-overview main{flex:1;min-height:0;width:100%}
+.page-overview .plant-design{height:100%;display:flex;flex-direction:column}
+.page-overview .plant-toolbar,.page-overview .plant-legend,.page-overview .endpoint-inspector{flex-shrink:0}
+.page-overview .plant-drawing{flex:1;min-height:0}
+.page-overview .plant-drawing>svg{height:100%;width:100%}
+.page-overview .drawing-loading{min-height:0;height:100%}
+@media(max-width:1300px){header.has-overview-kpis{grid-template-columns:160px 1fr}.header-meta{display:none}.preview-kpi-label{font-size:11px}}

@@ -1,4 +1,4 @@
-<div class="sidenav-menu" *ngIf="showSidenav" style="height: 100%" [ngClass]="'sidenav-menu-' + layout.navigation.type"
+<div class="sidenav-menu" *ngIf="showSidenav" style="height: 100%" [ngClass]="'sidenav-menu-' + layout.navigation.type" [class.melissa-navigation]="logo === '/melissa/graphics/condor-robotics.svg'"
                         [style.background-color]="layoutNavigation.bkcolor" [style.color]="layoutNavigation.fgcolor">
     <mat-list style="background-color: inherit;">
         <mat-list-item class="sidenav-header" style="display: flex; justify-content: center; height: 45px; font-weight: bold; padding-bottom: 10px; width: unset"
