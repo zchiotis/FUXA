@@ -89,7 +89,7 @@ function render(data){
     } else if(page==='buffer'){
         const entries=data.buffer.entries.filter(e=>e.sscc?.value);
         c.innerHTML=note('Παλέτες που ανατέθηκαν στα AGV και αναμένουν την παράδοσή τους στο Τυλιχτικό.')+
-            card('Αναθέσεις στα AGV',note(data.buffer.reason)+table(['Θέση','SSCC','Υλικό','Παλέτα','Κατάσταση'],entries.map(e=>row([escape(e.slot),show(e.sscc),show(e.material),show(e.pallet),'Αναμένεται παράδοση στο Τυλιχτικό']))||[]))+
+            card('Αναθέσεις στα AGV',note('Η σύνδεση του AGVBuffer_DB με τα πραγματικά δεδομένα του CPLC εκκρεμεί.')+table(['Θέση','SSCC','Υλικό','Παλέτα','Κατάσταση'],entries.map(e=>row([escape(e.slot),show(e.sscc),show(e.material),show(e.pallet),'Αναμένεται παράδοση στο Τυλιχτικό']))||[]))+
             (entries.length?'':note('Δεν υπάρχουν δεσμευμένα live tags για το optimized DB8. Η λίστα παραμένει κενή χωρίς δοκιμαστικές εγγραφές.'));
     } else if(page==='deliveries'){
         c.innerHTML=note('Κάθε παλέτα που παραδόθηκε από AGV στο Τυλιχτικό. Η πηγή επιβεβαίωσης δεν έχει ακόμη συνδεθεί, επομένως δεν καταχωρούνται αυτόματα παραδόσεις.')+

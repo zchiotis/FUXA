@@ -83,10 +83,20 @@ async function main(){
     await page.waitForFunction(()=>Array.from(document.querySelectorAll('iframe')).some(f=>f.src.includes('/melissa/')),undefined,{timeout:45000});
     const frame=page.frames().find(f=>f.url().includes('/melissa/'));
     await frame.waitForSelector('[data-layout-drawing]>svg');
+    const nativeBounds=async()=>page.locator('iframe[src*="/melissa/"]').evaluate(el=>{
+        const r=el.getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,viewportWidth:innerWidth,viewportHeight:innerHeight};
+    });
+    await page.waitForTimeout(300);
+    let bounds=await nativeBounds();
+    fs.writeFileSync(path.join(out,'native-bounds.json'),JSON.stringify(bounds,null,2));
+    assert.ok(bounds.left>=-1&&bounds.top>=-1&&bounds.right<=bounds.viewportWidth+1&&bounds.bottom<=bounds.viewportHeight+1,'native FUXA must show the entire iframe, including the wrapper and rotation control: '+JSON.stringify(bounds));
     assert.equal(await frame.evaluate(()=>document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight),false,'native overview must fit its FUXA iframe');
     assert.equal(await page.locator('app-sidenav img').getAttribute('src'),'/melissa/graphics/condor-robotics.svg');
     assert.equal(await frame.locator('[data-layout-rotate]').count(),1);
     await page.screenshot({path:path.join(out,'fuxa-native-home.png'),fullPage:true});
+    await page.setViewportSize({width:1600,height:900});await page.waitForTimeout(300);bounds=await nativeBounds();
+    assert.ok(bounds.right<=1601&&bounds.bottom<=901,'native view must follow available container size');
+    await page.setViewportSize({width:1920,height:1080});await page.waitForTimeout(300);
     assert.deepEqual(errors,[]);
     fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({status:'passed',pages:16,artwork:'v14',productionDevicesEnabled:false,plcValidation:false,syntheticFrameTest:true,occupiedDisplayTest:true,semolinaCommandsDisabled:true,palomatModals:true,uprightRotation:true,nativeOverviewFits1080p:true,deliveryTarget:'wrapper'},null,2));
 }

@@ -1,5 +1,6 @@
 :host {
     ::ng-deep .melissa-navigation {
+        .sidenav-header img { width: 148px !important; max-width: 148px !important; height: auto !important; }
         .sidenav-header { height: 65px !important; padding: 10px 14px !important; }
         .sidenav-submenu-btn { padding-left: 14px !important; padding-right: 10px !important; }
         .menu-item-content-inline span { white-space: normal; line-height: 1.25; font-size: 14px; }

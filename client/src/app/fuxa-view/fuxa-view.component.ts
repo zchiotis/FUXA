@@ -77,6 +77,7 @@ export class FuxaViewComponent implements OnInit, AfterViewInit, OnDestroy {
 
     viewLoaded: boolean = false;
     private viewRenderDelay = 0; // Delay to render view after loading SVG content
+    private containerResizeObserver: ResizeObserver;
 
     private subscriptionOnChange: Subscription;
     protected staticValues: any = {};
@@ -103,6 +104,13 @@ export class FuxaViewComponent implements OnInit, AfterViewInit, OnDestroy {
 
     ngAfterViewInit() {
         this.loadHmi(this.view);
+        // A fixed navigation drawer changes the available area after the view loads,
+        // without a window resize. Keep auto-resized views inside that actual area.
+        const container = this.dataContainer.nativeElement.parentElement?.parentElement;
+        if (!this.child && container) {
+            this.containerResizeObserver = new ResizeObserver(() => this.onResize());
+            this.containerResizeObserver.observe(container);
+        }
         /* check if already loaded */
         // if (this.projectService.getHmi()) {
         //     this.initScheduledScripts();
@@ -121,6 +129,7 @@ export class FuxaViewComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngOnDestroy() {
+        this.containerResizeObserver?.disconnect();
         try {
             this.destroy$.next(null);
             this.destroy$.complete();
