@@ -66,11 +66,23 @@ async function main(){
     await page.screenshot({path:path.join(out,'native-overview.png')});
     const geometry=async(p,prefix)=>p.evaluate(prefix=>{
         const panel=document.getElementById(prefix+'layout_panel'),svg=panel.ownerSVGElement,origin=svg.getBoundingClientRect(),scale=svg.getScreenCTM().a;
-        return Object.fromEntries([...document.querySelectorAll('[id^="'+prefix+'"]')].filter(e=>e.hasAttribute('type')&&/_(request_|station_|open_|art_|status_)/.test(e.id)&&e.getBoundingClientRect().width).map(e=>{
+        return Object.fromEntries([...document.querySelectorAll('[id^="'+prefix+'"]')].filter(e=>e.hasAttribute('type')&&e.getBoundingClientRect().width).map(e=>{
             const b=e.getBoundingClientRect();return [e.id,{x:(b.x-origin.x)/scale,y:(b.y-origin.y)/scale,w:b.width/scale,h:b.height/scale}];
         }));
     },prefix);
     const beforeEditor=await geometry(page,'MEL_overview_');
+    const checkAgvImage=async(p,prefix)=>{
+        const count=await p.locator('[id^="'+prefix+'open_buffer_"] image').evaluateAll(async images=>{
+            const sources=images.map(image=>image.href.baseVal);
+            await Promise.all(sources.map(async source=>{
+                if(!source.startsWith('data:image/'))throw new Error('AGV graphic lost its embedded source');
+                const img=new Image();img.src=source;await img.decode();
+            }));
+            return sources.length;
+        });
+        assert.equal(count,1,'AGV graphic must remain on the layout');
+    };
+    await checkAgvImage(page,'MEL_overview_');
     const clickTarget=async target=>{
         const items=Object.values(overview.items).filter(i=>i.property.events?.some(e=>e.actparam==='melissa_'+target));
         const item=items.find(i=>i.id.includes('_request_'))||items[0];
@@ -118,6 +130,13 @@ async function main(){
     await editor.waitForTimeout(600);
     const onboarding=editor.locator('app-onboarding-wizard .dialog-close-btn, dialog-onboarding-wizard .dialog-close-btn');
     if(await onboarding.count())await onboarding.click();
+    const savedViews=new Map();
+    editor.on('response',response=>{
+        if(response.ok()&&new URL(response.url()).pathname==='/api/projectData'){
+            const payload=response.request().postDataJSON();
+            if(payload?.cmd==='set-view')savedViews.set(payload.data.id,payload.data);
+        }
+    });
     for(const pageId of ['overview','overview_180']){
         const view=project.hmi.views.find(v=>v.id==='melissa_'+pageId),prefix='MEL_'+pageId+'_';
         await editor.locator('app-editor-views-list .view-item-text').getByText(view.name,{exact:true}).click();
@@ -132,7 +151,13 @@ async function main(){
         await editor.locator('gauge-property .dialog-close-btn').click();await editor.waitForSelector('gauge-property',{state:'detached'});
         await editor.screenshot({path:path.join(out,'native-editor-'+pageId+'.png')});
     }
-    await editor.goto('http://127.0.0.1:1881/home');await editor.waitForSelector('#MEL_overview_rotation');
+    await editor.locator('app-editor-views-list .view-item-text').getByText(overview.name,{exact:true}).click();
+    for(const id of ['melissa_overview','melissa_overview_180']){
+        const saved=savedViews.get(id)??await editor.waitForResponse(response=>response.ok()&&
+            new URL(response.url()).pathname==='/api/projectData'&&response.request().postDataJSON()?.data?.id===id)
+            .then(response=>response.request().postDataJSON().data);
+        assert.ok(saved.svgcontent.includes('xlink:href="data:image/'),'Editor save must retain the AGV artwork for '+id);
+    }
     await page.goto('http://127.0.0.1:1881/home');await page.waitForSelector('#MEL_overview_rotation');
     await page.waitForTimeout(600);await watermark(page);
     const afterEditor=await geometry(page,'MEL_overview_');
@@ -142,9 +167,11 @@ async function main(){
     }
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('#MEL_overview_request_r1-1-out path')).fill==='rgb(255, 211, 91)');
     assert.ok(await page.locator('#MEL_overview_occupied_r1-1-out').isVisible(),'Occupied binding must survive editor save');
+    await checkAgvImage(page,'MEL_overview_');
     await page.screenshot({path:path.join(out,'native-overview-after-editor.png')});
     await page.locator('#MEL_overview_rotation').click();await page.waitForSelector('#MEL_overview_180_rotation');
     const afterEditor180=await geometry(page,'MEL_overview_180_');
+    await checkAgvImage(page,'MEL_overview_180_');
     for(const [id,before]of Object.entries(beforeEditor180))for(const key of ['x','y','w','h'])assert.ok(Math.abs(before[key]-afterEditor180[id]?.[key])<1,'Editor changed rotated geometry: '+id+' '+key);
     await page.screenshot({path:path.join(out,'native-overview-180-after-editor.png')});
     assert.deepEqual(errors,[]);

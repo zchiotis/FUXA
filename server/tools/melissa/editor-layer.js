@@ -33,6 +33,12 @@ function editorSvg(svg,id){
     visit(root,(node,parents)=>{
         if(node.attrs.transform)node.attrs.transform=matrixTransform(node.attrs.transform);
         if(node.tag==='title'&&parents.some(p=>p.attrs.type?.startsWith('svg-ext-')))remove(parents[parents.length-1],node);
+        // SVG-Edit reads and serializes image sources in the XLink namespace.
+        if(node.tag==='image'&&node.attrs.href){
+            root.attrs['xmlns:xlink']='http://www.w3.org/1999/xlink';
+            node.attrs['xlink:href']=node.attrs.href;
+            delete node.attrs.href;
+        }
         if(node.attrs.style?.includes('display:none')){
             node.attrs.display='none';
             node.attrs.style=node.attrs.style.replace(/display\s*:\s*none\s*;?/g,'');

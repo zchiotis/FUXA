@@ -36,7 +36,7 @@ async function prepare(options={}){
                     if(JSON.stringify(upgraded)!==JSON.stringify(old))updates.push(upgraded);
                     continue;
                 }
-                if(old&&(native(old)||!legacy(old,view.id)))continue;
+                if(old&&!legacy(old,view.id))continue;
                 if(JSON.stringify(old)!==JSON.stringify(view))updates.push(view);
             }
             layout.zoom='autoresize';layout.autoresize=true;

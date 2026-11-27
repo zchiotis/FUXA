@@ -65,6 +65,11 @@ function overview(model,rotated=false){
     const tree=parse(fs.readFileSync(path.join(publicDir,'factory-layout.svg'),'utf8'));
     // Remember semantic roles before classes are converted into editable SVG attributes.
     visit(tree,n=>{if(n.attrs.class)n.nativeClass=n.attrs.class;});bakeStyles(tree);
+    // Use typography that survives SVG-Edit serialization.
+    visit(tree,n=>{
+        delete n.attrs['letter-spacing'];
+        if(rotated&&n.nativeClass==='zone-label')n.attrs['text-anchor']='end';
+    });
     const output=[],seen=new Set();let counter=0;
     // Bake an alternative native view; no page script or HTML widget rotates the layout.
     if(rotated)visit(tree,(node,parents)=>{
