@@ -50,7 +50,7 @@ export class EditorViewsListComponent {
     }
 
     isViewActive(view) {
-        return (this.currentView && this.currentView.name === view.name);
+        return (this.currentView && this.currentView.id === view.id);
     }
 
     onDeleteView(view) {

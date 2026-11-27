@@ -1,6 +1,7 @@
 'use strict';
 const fs=require('fs'),path=require('path');
 const {parse,xml,visit,remove,clone,esc,bakeStyles}=require('./native-scene');
+const {editorSvg}=require('./editor-layer');
 const {graphic:palomatGraphic,assignments,palletTypes}=require('./palomat-graphics');
 const manifest=require('../../../examples/melissa/manifest.json');
 const publicDir=path.resolve(__dirname,'../../api/melissa/public');
@@ -43,8 +44,8 @@ class View{
         return this.add(key,title,`<foreignObject id="D-OXC_${id}" x="${x}" y="${y}" width="${w}" height="${h}"></foreignObject>`,{type:TABLE,property:{type:'data',options,events:[]},hint:source==='tags'?'User-selected OPC UA tags per table cell':null});
     }
     header(back=true){this.text('title',this.name,30,48,28);if(back)this.button('home','← Εγκατάσταση',1490,17,220,'overview');}
-    finish(){return {id:this.id,name:this.name,type:'svg',profile:{width:this.width,height:this.height,bkcolor:C.bg+'ff'},property:{melissaNativeVersion:1},variables:{},items:this.items,
-        svgcontent:`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}"><rect width="${this.width}" height="${this.height}" fill="${C.bg}"/>${this.parts.join('')}</svg>`};}
+    finish(){return {id:this.id,name:this.name,type:'svg',profile:{width:this.width,height:this.height,bkcolor:C.bg+'ff'},property:{melissaNativeVersion:2},variables:{},items:this.items,
+        svgcontent:editorSvg(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}"><rect width="${this.width}" height="${this.height}" fill="${C.bg}"/>${this.parts.join('')}</svg>`,this.id)};}
 }
 function artwork(v,key,body,x,y,w,h){return v.add(key,key,body.replace('<svg ',`<svg x="${x}" y="${y}" width="${w}" height="${h}" `));}
 function stationPage(point){
@@ -55,7 +56,7 @@ function stationPage(point){
     v.text('unbound','Επιλογή πραγματικών OPC UA tags από τον editor.',28,530,14,C.muted);return v;
 }
 function overview(model,rotated=false){
-    const v=new View(rotated?'overview_180':'overview','Εγκατάσταση');v.header(false);
+    const v=new View(rotated?'overview_180':'overview',rotated?'Εγκατάσταση · 180°':'Εγκατάσταση');v.header(false);
     v.button('rotation','Περιστροφή 180°',1470,20,235,rotated?'overview':'overview_180');
     for(const [i,[key,label,hint]]of [['waiting','Σε αναμονή','Aggregate: occupied full OUT + SEMOLINA'],['transit','Σε διακίνηση AGV','AGVBuffer outstanding pallet count'],['wrapper','Εντός Τυλιχτικού','Wrapper count until printing complete']].entries()){
         const x=290+i*285;v.card('kpi_'+key,x,12,270,86);v.value('kpi_value_'+key,label,x+15,38,hint);

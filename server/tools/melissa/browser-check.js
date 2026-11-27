@@ -64,6 +64,13 @@ async function main(){
     const bounds=await page.locator('#MEL_overview_layout_panel').boundingBox();
     assert.ok(bounds.x>=0&&bounds.x+bounds.width<=1921&&bounds.y+bounds.height<=1081,'native layout must fit 1080p');
     await page.screenshot({path:path.join(out,'native-overview.png')});
+    const geometry=async(p,prefix)=>p.evaluate(prefix=>{
+        const panel=document.getElementById(prefix+'layout_panel'),svg=panel.ownerSVGElement,origin=svg.getBoundingClientRect(),scale=svg.getScreenCTM().a;
+        return Object.fromEntries([...document.querySelectorAll('[id^="'+prefix+'"]')].filter(e=>e.hasAttribute('type')&&/_(request_|station_|open_|art_|status_)/.test(e.id)&&e.getBoundingClientRect().width).map(e=>{
+            const b=e.getBoundingClientRect();return [e.id,{x:(b.x-origin.x)/scale,y:(b.y-origin.y)/scale,w:b.width/scale,h:b.height/scale}];
+        }));
+    },prefix);
+    const beforeEditor=await geometry(page,'MEL_overview_');
     const clickTarget=async target=>{
         const items=Object.values(overview.items).filter(i=>i.property.events?.some(e=>e.actparam==='melissa_'+target));
         const item=items.find(i=>i.id.includes('_request_'))||items[0];
@@ -81,6 +88,7 @@ async function main(){
     await page.locator('#MEL_overview_rotation').click();await page.waitForSelector('#MEL_overview_180_rotation');
     const upright=await page.locator('#home svg text').evaluateAll(elements=>elements.filter(e=>e.textContent.trim()&&e.getBBox().width).every(e=>{const m=e.getScreenCTM();return m.a>0&&m.d>0;}));
     assert.equal(upright,true,'Rotated labels must remain upright');await page.screenshot({path:path.join(out,'native-overview-180.png')});
+    const beforeEditor180=await geometry(page,'MEL_overview_180_');
     await page.locator('#MEL_overview_180_rotation').click();await page.waitForSelector('#MEL_overview_rotation');
     for(const item of project.hmi.layout.navigation.items){
         await page.locator('app-sidenav button').filter({hasText:item.text}).first().click();
@@ -102,8 +110,45 @@ async function main(){
     await touchPage.locator('.dialog-modal-close i').tap();await touchPage.waitForSelector('app-fuxa-view-dialog',{state:'detached'});
     await touchPage.locator('#MEL_overview_rotation').tap();await touchPage.waitForSelector('#MEL_overview_180_rotation');
     await touchPage.screenshot({path:path.join(out,'native-touch-180.png')});await touch.close();
+    // Exercise the real editor, including the auto-save on switching views.
+    const editor=await browser.newPage({viewport:{width:2560,height:1440}});diagnosticPage=editor;
+    editor.on('pageerror',e=>errors.push(e.message));
+    await editor.goto('http://127.0.0.1:1881/editor');
+    await editor.waitForSelector('app-editor-views-list .view-item-text',{timeout:45000});
+    await editor.waitForTimeout(600);
+    const onboarding=editor.locator('app-onboarding-wizard .dialog-close-btn, dialog-onboarding-wizard .dialog-close-btn');
+    if(await onboarding.count())await onboarding.click();
+    for(const pageId of ['overview','overview_180']){
+        const view=project.hmi.views.find(v=>v.id==='melissa_'+pageId),prefix='MEL_'+pageId+'_';
+        await editor.locator('app-editor-views-list .view-item-text').getByText(view.name,{exact:true}).click();
+        await editor.waitForSelector('#svgcontent #'+prefix+'rotation');await editor.waitForTimeout(800);
+        assert.equal(await editor.locator('app-editor-views-list .leftbar-item-active').count(),1,'only the selected view must be active');
+        for(const key of ['request_r1-1-out','status_semolina']){
+            const id=prefix+key;await editor.locator('#svgcontent #'+id).click();
+            await editor.waitForFunction(name=>document.getElementById('gaugename')?.value===name,view.items[id].name);
+        }
+        await editor.locator('gauge-base button').click();await editor.waitForSelector('gauge-property');
+        assert.ok(await editor.locator('gauge-property flex-head').count(),'native element properties must be accessible');
+        await editor.locator('gauge-property .dialog-close-btn').click();await editor.waitForSelector('gauge-property',{state:'detached'});
+        await editor.screenshot({path:path.join(out,'native-editor-'+pageId+'.png')});
+    }
+    await editor.goto('http://127.0.0.1:1881/home');await editor.waitForSelector('#MEL_overview_rotation');
+    await page.goto('http://127.0.0.1:1881/home');await page.waitForSelector('#MEL_overview_rotation');
+    await page.waitForTimeout(600);await watermark(page);
+    const afterEditor=await geometry(page,'MEL_overview_');
+    for(const [id,before]of Object.entries(beforeEditor)){
+        const after=afterEditor[id];assert.ok(after,'Element lost after editor save: '+id);
+        for(const key of ['x','y','w','h'])assert.ok(Math.abs(before[key]-after[key])<1,'Editor changed geometry: '+id+' '+key+' '+before[key]+' -> '+after[key]);
+    }
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('#MEL_overview_request_r1-1-out path')).fill==='rgb(255, 211, 91)');
+    assert.ok(await page.locator('#MEL_overview_occupied_r1-1-out').isVisible(),'Occupied binding must survive editor save');
+    await page.screenshot({path:path.join(out,'native-overview-after-editor.png')});
+    await page.locator('#MEL_overview_rotation').click();await page.waitForSelector('#MEL_overview_180_rotation');
+    const afterEditor180=await geometry(page,'MEL_overview_180_');
+    for(const [id,before]of Object.entries(beforeEditor180))for(const key of ['x','y','w','h'])assert.ok(Math.abs(before[key]-afterEditor180[id]?.[key])<1,'Editor changed rotated geometry: '+id+' '+key);
+    await page.screenshot({path:path.join(out,'native-overview-180-after-editor.png')});
     assert.deepEqual(errors,[]);
-    fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({status:'passed',native:true,iframes:0,screenViews:16,totalViews:project.hmi.views.length,protocol:'OPCUA',preselectedCplcTags:0,productionDevicesEnabled:false,syntheticNativeBindingTest:true,ssccLeadingZeroesPreserved:true,touchEmulation:true,physicalTouchScreenValidation:false,plcValidation:false,editorBindingValidation:'Requires real server browse and user-selected tags'},null,2));
+    fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({status:'passed',native:true,iframes:0,screenViews:16,totalViews:project.hmi.views.length,protocol:'OPCUA',preselectedCplcTags:0,productionDevicesEnabled:false,syntheticNativeBindingTest:true,ssccLeadingZeroesPreserved:true,touchEmulation:true,editorSelectionTest:true,editorRoundTripGeometryPreserved:true,physicalTouchScreenValidation:false,plcValidation:false,editorBindingValidation:'Requires real server browse and user-selected tags'},null,2));
 }
 main().catch(async error=>{
     console.error(error);process.exitCode=1;

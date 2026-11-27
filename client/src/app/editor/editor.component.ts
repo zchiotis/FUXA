@@ -526,7 +526,7 @@ export class EditorComponent implements OnInit, AfterViewInit, OnDestroy {
             this.clearEditor();
             if (this.isSvgEditMode(this.editorMode)) {
                 let svgcontent = '';
-                let v = this.getView(view.name);
+                const v = view;
                 if (v) {
                     svgcontent = v.svgcontent;
                 }
@@ -1167,7 +1167,7 @@ export class EditorComponent implements OnInit, AfterViewInit, OnDestroy {
      * @param view view to check
      */
     isViewActive(view) {
-        return (this.currentView && this.currentView.name === view.name);
+        return (this.currentView && this.currentView.id === view.id);
     }
 
     /**

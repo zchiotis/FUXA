@@ -1,6 +1,7 @@
 'use strict';
 // One-time iframe/S7 migration. Thereafter native editor changes and OPC UA tags are preserved.
 const fs=require('fs'),path=require('path'),sqlite3=require('sqlite3');
+const {upgradeEditorView}=require('./editor-layer');
 async function prepare(options={}){
     const root=options.root||path.resolve(__dirname,'../../..'),data=options.dataDir||path.join(root,'data'),app=path.join(data,'_appdata');
     fs.mkdirSync(app,{recursive:true});
@@ -18,7 +19,7 @@ async function prepare(options={}){
         return view?.id===id&&items.length===1&&items[0].id==='MELISSA_IFRAME_'+page&&
             items[0].type==='svg-ext-own_ctrl-iframe'&&items[0].property?.address==='/melissa/?page='+page+'&embed=1';
     };
-    const native=view=>view?.property?.melissaNativeVersion===1;
+    const native=view=>[1,2].includes(view?.property?.melissaNativeVersion);
     try{
         if(existing){
             const rows=await all('SELECT name,value FROM general WHERE name IN (?,?)',['name','layout']);
@@ -30,6 +31,11 @@ async function prepare(options={}){
             const layout=structuredClone(general.layout||{}),oldLayout=structuredClone(layout),updates=[];
             for(const view of project.hmi.views){
                 const old=oldViews[view.id];
+                if(native(old)){
+                    const upgraded=upgradeEditorView(old,view);
+                    if(JSON.stringify(upgraded)!==JSON.stringify(old))updates.push(upgraded);
+                    continue;
+                }
                 if(old&&(native(old)||!legacy(old,view.id)))continue;
                 if(JSON.stringify(old)!==JSON.stringify(view))updates.push(view);
             }

@@ -11,7 +11,9 @@ function validate(){
     let elements=0;
     for(const view of project.hmi.views){
         assert.ok(!/iframe|<script|\/melissa\/\?/.test(view.svgcontent),'Non-native screen '+view.id);
-        const root=parse(view.svgcontent),top=new Map(root.children.filter(n=>n.attrs?.id).map(n=>[n.attrs.id,n]));
+        const root=parse(view.svgcontent),layers=root.children.filter(n=>n.tag==='g'&&n.children.some(c=>c.tag==='title'));
+        assert.equal(layers.length,1,'One editor layer required: '+view.id);
+        const top=new Map(layers[0].children.filter(n=>n.attrs?.id).map(n=>[n.attrs.id,n]));
         const counts={};visit(root,n=>{if(n.attrs.id)counts[n.attrs.id]=(counts[n.attrs.id]||0)+1;});
         for(const item of Object.values(view.items)){
             elements++;assert.ok(top.has(item.id),'Not independently selectable: '+item.id);assert.equal(counts[item.id],1);
@@ -27,6 +29,7 @@ function validate(){
         }
     }
     const overview=project.hmi.views.find(v=>v.id==='melissa_overview');
+    assert.notEqual(overview.name,project.hmi.views.find(v=>v.id==='melissa_overview_180').name);
     assert.equal(Object.keys(overview.items).filter(id=>id.includes('_request_')&&!id.includes('request_button')).length,36);
     assert.equal(Object.keys(overview.items).filter(id=>id.includes('_occupied_')).length,18);
     const result={status:'passed',method:'static generated-project validation',views:project.hmi.views.length,editableElements:elements,iframeElements:0,protocol:'OPCUA',preselectedCplcTags:0,compiledFuxaTest:false,realPlcValidation:false};

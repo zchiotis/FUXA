@@ -54,7 +54,7 @@ jobs:
           Copy-Item -LiteralPath (Get-Command node).Source -Destination (Join-Path $packageRoot 'node.exe')
           Copy-Item -Path examples/melissa/Start-Melissa.cmd -Destination $packageRoot
           Copy-Item -Path examples/melissa/README.md -Destination $packageRoot
-          @{commit='${{ github.sha }}';run='${{ github.run_id }}';fuxa='1.3.4-2888';melissa='0.4.0';artwork='v14-native';cplc='OPCUA'} | ConvertTo-Json | Set-Content (Join-Path $packageRoot 'build.json')
+          @{commit='${{ github.sha }}';run='${{ github.run_id }}';fuxa='1.3.4-2888';melissa='0.4.1';artwork='v14-native-editor';cplc='OPCUA'} | ConvertTo-Json | Set-Content (Join-Path $packageRoot 'build.json')
           Write-Output "MELISSA_PACKAGE=$packageRoot" >> $env:GITHUB_ENV
       - name: Prepare isolated test project
         shell: pwsh
