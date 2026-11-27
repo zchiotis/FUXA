@@ -2,7 +2,7 @@
 // Windows CI only. Real native FUXA rendering; no production device is enabled.
 const {chromium}=require('playwright'),fs=require('fs'),path=require('path'),assert=require('assert/strict');
 const {spawn}=require('child_process');
-let serverProcess,browser;
+let serverProcess,browser,diagnosticPage,outputDirectory;
 const syntheticSscc='000000000000000123';
 async function seedBindingFixture(root){
     // Changes only the isolated CI data directory, removed before packaging.
@@ -12,8 +12,11 @@ async function seedBindingFixture(root){
     const view=id=>new Promise((resolve,reject)=>db.get('SELECT value FROM views WHERE name=?',[id],(e,row)=>e?reject(e):resolve(JSON.parse(row.value))));
     try{
         const server=await get('server');
+        server.enabled=true;
         server.tags={...server.tags,__ci_sscc:{id:'__ci_sscc',name:'SYNTHETIC CI SSCC',type:'string',init:syntheticSscc},__ci_request:{id:'__ci_request',name:'SYNTHETIC CI REQUEST',type:'boolean',init:true}};
-        await run('UPDATE devices SET value=? WHERE name=?',[JSON.stringify(server),'server']);
+        // Native FUXA clients browse devices['0']; the legacy server field is
+        // deliberately excluded from the runtime client project response.
+        await run('INSERT OR REPLACE INTO devices(name,value) VALUES(?,?)',['0',JSON.stringify(server)]);
         for(const name of ['overview','overview_180']){
             const v=await view('melissa_'+name);
             v.items['MEL_'+name+'_request_r1-1-out'].property.variableId='__ci_request';
@@ -28,7 +31,7 @@ async function seedBindingFixture(root){
 }
 async function watermark(page){await page.evaluate(()=>{const n=document.createElement('div');n.textContent='SYNTHETIC CI DATA · NOT PLC';n.style='position:fixed;top:0;right:0;z-index:9999999;padding:6px 10px;background:#ffe6a3;color:#594215;font:13px Segoe UI';document.body.appendChild(n);});}
 async function main(){
-    const out=path.resolve('artifacts/melissa-qa');fs.mkdirSync(out,{recursive:true});
+    const out=path.resolve('artifacts/melissa-qa');outputDirectory=out;fs.mkdirSync(out,{recursive:true});
     const root=process.env.MELISSA_PACKAGE;if(!root)throw new Error('MELISSA_PACKAGE is required');
     const project=JSON.parse(fs.readFileSync(path.join(root,'examples/melissa/Melissa_CPLC.fuxap')));
     assert.equal(project.devices['melissa-cplc'].type,'OPCUA');assert.deepEqual(project.devices['melissa-cplc'].tags,{});
@@ -43,8 +46,12 @@ async function main(){
         await new Promise(r=>setTimeout(r,500));
     }
     assert.ok(ready,'FUXA did not become ready');
+    const loaded=await(await fetch('http://127.0.0.1:1881/api/project')).json();
+    assert.ok(loaded.devices?.['0']?.tags?.__ci_request,'native internal fixture tags must be present in the runtime project');
+    fs.writeFileSync(path.join(out,'fixture-summary.json'),JSON.stringify({internalTagIds:Object.keys(loaded.devices['0'].tags),productionDevices:Object.values(loaded.devices).filter(d=>d.id!=='0').map(d=>({id:d.id,enabled:d.enabled}))},null,2));
     browser=await chromium.launch({headless:true});
     const page=await browser.newPage({viewport:{width:1920,height:1080}}),errors=[];
+    diagnosticPage=page;
     page.on('pageerror',e=>errors.push(e.message));
     await page.goto('http://127.0.0.1:1881/home');
     const overview=project.hmi.views.find(v=>v.id==='melissa_overview');
@@ -98,6 +105,14 @@ async function main(){
     assert.deepEqual(errors,[]);
     fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({status:'passed',native:true,iframes:0,screenViews:16,totalViews:project.hmi.views.length,protocol:'OPCUA',preselectedCplcTags:0,productionDevicesEnabled:false,syntheticNativeBindingTest:true,ssccLeadingZeroesPreserved:true,touchEmulation:true,physicalTouchScreenValidation:false,plcValidation:false,editorBindingValidation:'Requires real server browse and user-selected tags'},null,2));
 }
-main().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{
+main().catch(async error=>{
+    console.error(error);process.exitCode=1;
+    if(diagnosticPage){
+        try{await diagnosticPage.screenshot({path:path.join(outputDirectory,'failure.png')});
+            const state=await diagnosticPage.evaluate(()=>({url:location.href,dialogs:document.querySelectorAll('app-fuxa-view-dialog').length,requestColor:document.querySelector('#MEL_overview_request_r1-1-out path')?.getAttribute('fill'),nativeElementCount:document.querySelectorAll('[type^="svg-ext-"]').length}));
+            fs.writeFileSync(path.join(outputDirectory,'failure.json'),JSON.stringify(state,null,2));
+        }catch(_){}
+    }
+}).finally(async()=>{
     if(browser)await browser.close();if(serverProcess){serverProcess.kill();await new Promise(r=>{if(serverProcess.exitCode!==null)r();else serverProcess.once('exit',r);});}
 });
