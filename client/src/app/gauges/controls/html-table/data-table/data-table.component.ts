@@ -240,7 +240,9 @@ export class DataTableComponent implements OnInit, AfterViewInit, OnDestroy {
             this.tagsMap[variableId].value = variableValue;
             this.tagsMap[variableId].cells.forEach((cell: TableCellData) => {
                 const rawValue = GaugeBaseComponent.maskedShiftedValue(variableValue, cell.bitmask);
-                cell.stringValue = Utils.formatValue(rawValue?.toString(), cell.valueFormat);
+                const textValue=rawValue?.toString()??'';
+                // A blank format means raw text, including leading zeroes in SSCCs.
+                cell.stringValue = cell.valueFormat ? Utils.formatValue(textValue, cell.valueFormat) : textValue;
             });
             // update timestamp of all timestamp cells
             this.tagsMap[variableId].rows.forEach((rowIndex: number) => {

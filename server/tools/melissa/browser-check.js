@@ -3,12 +3,37 @@
 const {chromium}=require('playwright'),fs=require('fs'),path=require('path'),assert=require('assert/strict');
 const {spawn}=require('child_process');
 let serverProcess,browser;
+const syntheticSscc='000000000000000123';
+async function seedBindingFixture(root){
+    // Changes only the isolated CI data directory, removed before packaging.
+    const db=new(require('sqlite3').Database)(path.join(root,'data/_appdata/project.fuxap.db'));
+    const get=name=>new Promise((resolve,reject)=>db.get('SELECT value FROM devices WHERE name=?',[name],(e,row)=>e?reject(e):resolve(JSON.parse(row.value))));
+    const run=(sql,args)=>new Promise((resolve,reject)=>db.run(sql,args,e=>e?reject(e):resolve()));
+    const view=id=>new Promise((resolve,reject)=>db.get('SELECT value FROM views WHERE name=?',[id],(e,row)=>e?reject(e):resolve(JSON.parse(row.value))));
+    try{
+        const server=await get('server');
+        server.tags={...server.tags,__ci_sscc:{id:'__ci_sscc',name:'SYNTHETIC CI SSCC',type:'string',init:syntheticSscc},__ci_request:{id:'__ci_request',name:'SYNTHETIC CI REQUEST',type:'boolean',init:true}};
+        await run('UPDATE devices SET value=? WHERE name=?',[JSON.stringify(server),'server']);
+        for(const name of ['overview','overview_180']){
+            const v=await view('melissa_'+name);
+            v.items['MEL_'+name+'_request_r1-1-out'].property.variableId='__ci_request';
+            for(const action of v.items['MEL_'+name+'_occupied_r1-1-out'].property.actions)action.variableId='__ci_request';
+            await run('UPDATE views SET value=? WHERE name=?',[JSON.stringify(v),v.id]);
+        }
+        const robot=await view('melissa_r1');robot.items.MEL_r1_handshake.property.options.rows[0].cells[7].variableId='__ci_sscc';
+        await run('UPDATE views SET value=? WHERE name=?',[JSON.stringify(robot),robot.id]);
+        const station=await view('melissa_station_r1-1-out');station.items['MEL_station_r1-1-out_field_SSCC'].property.variableId='__ci_sscc';
+        await run('UPDATE views SET value=? WHERE name=?',[JSON.stringify(station),station.id]);
+    }finally{await new Promise(resolve=>db.close(resolve));}
+}
+async function watermark(page){await page.evaluate(()=>{const n=document.createElement('div');n.textContent='SYNTHETIC CI DATA · NOT PLC';n.style='position:fixed;top:0;right:0;z-index:9999999;padding:6px 10px;background:#ffe6a3;color:#594215;font:13px Segoe UI';document.body.appendChild(n);});}
 async function main(){
     const out=path.resolve('artifacts/melissa-qa');fs.mkdirSync(out,{recursive:true});
     const root=process.env.MELISSA_PACKAGE;if(!root)throw new Error('MELISSA_PACKAGE is required');
     const project=JSON.parse(fs.readFileSync(path.join(root,'examples/melissa/Melissa_CPLC.fuxap')));
     assert.equal(project.devices['melissa-cplc'].type,'OPCUA');assert.deepEqual(project.devices['melissa-cplc'].tags,{});
     assert.ok(Object.values(project.devices).every(d=>!d.enabled));
+    await seedBindingFixture(root);
     const log=fs.openSync(path.join(out,'fuxa-runtime.log'),'w');
     serverProcess=spawn(path.join(root,'node.exe'),['server/main.js','--userDir',path.join(root,'data'),'--port','1881'],{cwd:root,windowsHide:true,stdio:['ignore',log,log]});fs.closeSync(log);
     let ready=false;
@@ -24,19 +49,24 @@ async function main(){
     await page.goto('http://127.0.0.1:1881/home');
     const overview=project.hmi.views.find(v=>v.id==='melissa_overview');
     await page.waitForSelector('#MEL_overview_rotation',{timeout:45000});await page.waitForTimeout(400);
+    await watermark(page);
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('#MEL_overview_request_r1-1-out path')).fill==='rgb(255, 211, 91)');
+    assert.equal(await page.locator('#MEL_overview_occupied_r1-1-out').isVisible(),true,'native Occupied action must show the synthetic pallet');
     assert.equal(await page.locator('iframe').count(),0,'HMI must contain no iframes');
     assert.ok(await page.locator('[type="svg-ext-shapes"]').count()>100);
     const bounds=await page.locator('#MEL_overview_layout_panel').boundingBox();
     assert.ok(bounds.x>=0&&bounds.x+bounds.width<=1921&&bounds.y+bounds.height<=1081,'native layout must fit 1080p');
     await page.screenshot({path:path.join(out,'native-overview.png')});
     const clickTarget=async target=>{
-        const item=Object.values(overview.items).find(i=>i.property.events?.some(e=>e.actparam==='melissa_'+target));
+        const items=Object.values(overview.items).filter(i=>i.property.events?.some(e=>e.actparam==='melissa_'+target));
+        const item=items.find(i=>i.id.includes('_request_'))||items[0];
         assert.ok(item,'Missing native navigation '+target);await page.locator('#'+item.id).click();
     };
     for(const target of ['palomat_5','palomat_1','eidos_popup','station_r1-1-out']){
         await clickTarget(target);await page.waitForSelector('app-fuxa-view-dialog');
         const view=project.hmi.views.find(v=>v.id==='melissa_'+target);
         await page.waitForSelector('#'+Object.keys(view.items)[0]);
+        if(target==='station_r1-1-out')await page.waitForFunction(value=>document.getElementById('MEL_station_r1-1-out_field_SSCC')?.textContent===value,syntheticSscc);
         assert.equal(await page.locator('app-fuxa-view-dialog iframe').count(),0);
         await page.screenshot({path:path.join(out,'native-'+target+'.png')});
         await page.locator('.dialog-modal-close i').last().click();await page.waitForSelector('app-fuxa-view-dialog',{state:'detached'});
@@ -49,6 +79,7 @@ async function main(){
         await page.locator('app-sidenav button').filter({hasText:item.text}).first().click();
         const view=project.hmi.views.find(v=>v.id===item.view);
         await page.waitForSelector('#'+Object.keys(view.items)[0]);await page.waitForTimeout(150);
+        if(item.view==='melissa_r1')await page.waitForFunction(value=>document.getElementById('MEL_r1_handshake')?.textContent.includes(value),syntheticSscc);
         assert.equal(await page.locator('iframe').count(),0);
         await page.screenshot({path:path.join(out,item.view+'.png')});
     }
@@ -57,6 +88,7 @@ async function main(){
     const touch=await browser.newContext({viewport:{width:1920,height:1080},hasTouch:true});
     const touchPage=await touch.newPage();touchPage.on('pageerror',e=>errors.push(e.message));
     await touchPage.goto('http://127.0.0.1:1881/home');await touchPage.waitForSelector('#MEL_overview_rotation');
+    await watermark(touchPage);
     const palomat=Object.values(overview.items).find(i=>i.property.events?.some(e=>e.actparam==='melissa_palomat_1'));
     await touchPage.locator('#'+palomat.id).tap();await touchPage.waitForSelector('app-fuxa-view-dialog');
     assert.equal(await touchPage.locator('app-fuxa-view-dialog').count(),1,'one tap must open one native dialog');
@@ -64,7 +96,7 @@ async function main(){
     await touchPage.locator('#MEL_overview_rotation').tap();await touchPage.waitForSelector('#MEL_overview_180_rotation');
     await touchPage.screenshot({path:path.join(out,'native-touch-180.png')});await touch.close();
     assert.deepEqual(errors,[]);
-    fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({status:'passed',native:true,iframes:0,screenViews:16,totalViews:project.hmi.views.length,protocol:'OPCUA',preselectedCplcTags:0,productionDevicesEnabled:false,touchEmulation:true,physicalTouchScreenValidation:false,plcValidation:false,editorBindingValidation:'Requires real server browse and user-selected tags'},null,2));
+    fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({status:'passed',native:true,iframes:0,screenViews:16,totalViews:project.hmi.views.length,protocol:'OPCUA',preselectedCplcTags:0,productionDevicesEnabled:false,syntheticNativeBindingTest:true,ssccLeadingZeroesPreserved:true,touchEmulation:true,physicalTouchScreenValidation:false,plcValidation:false,editorBindingValidation:'Requires real server browse and user-selected tags'},null,2));
 }
 main().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{
     if(browser)await browser.close();if(serverProcess){serverProcess.kill();await new Promise(r=>{if(serverProcess.exitCode!==null)r();else serverProcess.once('exit',r);});}

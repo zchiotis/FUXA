@@ -9,14 +9,16 @@
 
 Αποτελέσματα: `native-validation.json`. Δεν εγκαταστάθηκε ή εκτελέστηκε FUXA στον τοπικό υπολογιστή. Δεν έγινε σύνδεση PLC, browse, write, TIA compile/download ή τροποποίηση πηγών PLC.
 
-## Προετοιμασμένοι έλεγχοι για επόμενο Windows build · δεν εκτελέστηκαν σε αυτή την αλλαγή
+## Έλεγχοι στο Windows CI του πακέτου
 
 - Angular compilation, OPC UA dependency loading και απομονωμένο FUXA startup.
 - Native home και 16 κύριες οθόνες, native dialogs, μηδέν runtime iframes, περιστροφή με όρθια γράμματα και 1920×1080 fitting.
 - Μετατροπή παλιού iframe/S7 project, backup παλιάς σύνδεσης και διατήρηση editor αλλαγών, OPC UA tags, credentials, ιστορικού και custom views.
 - Υπάρχοντες έλεγχοι logging, read-only guard και Kawasaki. Οι παλιοί έλεγχοι S7 decoding αφορούν μόνο τον ιστορικό adapter, όχι το νέο transport του CPLC.
+- Προσομοίωση αφής για άνοιγμα/κλείσιμο native dialog και περιστροφή. Η επαλήθευση στο φυσικό touch screen γίνεται χωριστά από τον χρήστη.
+- Προσωρινά internal tags μόνο στην απομονωμένη CI βάση, για native bindings και διατήρηση 18-ψήφιου SSCC με αρχικά μηδενικά σε Value και Table. Τα screenshots επισημαίνονται SYNTHETIC CI DATA. Η προσωρινή βάση αφαιρείται πριν δημιουργηθεί το πακέτο.
 
-Το παλιό επιτυχές build 5 αφορούσε την προηγούμενη αρχιτεκτονική iframe/S7. Δεν αποτελεί επαλήθευση αυτής της αλλαγής. Δεν έγινε νέο build ή push που θα ενεργοποιούσε build.
+Το παλιό επιτυχές build 5 αφορούσε την προηγούμενη αρχιτεκτονική iframe/S7. Δεν αποτελεί επαλήθευση αυτής της αλλαγής. Για το νέο πακέτο, πρωτογενής απόδειξη είναι η κατάσταση του αντίστοιχου Windows run και το `result.json` στο QA artifact· το έγγραφο δεν προδικάζει επιτυχία ή commissioning.
 
 ## Έλεγχος από τον υπολογιστή δοκιμών με πραγματικό OPC UA CPLC · ανοικτός
 
