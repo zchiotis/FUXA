@@ -1,0 +1,17 @@
+{
+  "method": "static SVG in Edge; not FUXA runtime",
+  "pages": [
+    {
+      "name": "overview",
+      "uprightText": true,
+      "nativeAttributeColorOverride": true,
+      "iframeCount": 0
+    },
+    {
+      "name": "overview_180",
+      "uprightText": true,
+      "nativeAttributeColorOverride": true,
+      "iframeCount": 0
+    }
+  ]
+}

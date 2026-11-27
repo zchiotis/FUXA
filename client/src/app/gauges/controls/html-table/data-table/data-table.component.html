@@ -36,7 +36,8 @@
     <mat-paginator *ngIf="tableOptions.paginator.show" [pageSizeOptions]="[10, 25, 100]" [pageSize]="25" class="data-table-paginator" [style.color]="tableOptions.row.color">
     </mat-paginator>
 </div>
-<div class="data-table-scroll" [style.height]="withToolbar ? 'calc(100% - 42px)' : '100%'">
+<div *ngIf="sourceError || sourceNotice" role="status" [style.color]="sourceError ? '#a34249' : '#526c7f'" style="padding:8px 12px;background:#f3f7fa;font-size:14px">{{sourceError || sourceNotice}}</div>
+<div class="data-table-scroll" [style.height]="sourceError || sourceNotice ? 'calc(100% - 42px)' : withToolbar ? 'calc(100% - 42px)' : '100%'">
     <mat-table #table [dataSource]="dataSource" [style.backgroundColor]="tableOptions.row.background"
         [style.--mat-table-row-item-outline-color]="tableOptions.gridColor"
         [style.--mdc-data-table-row-divider-color]="tableOptions.gridColor"

@@ -25,6 +25,8 @@ import * as FileSaver from 'file-saver';
 import { CommandService } from '../../../../_services/command.service';
 import { LanguageService } from '../../../../_services/language.service';
 import { GaugeBaseComponent } from '../../../gauge-base/gauge-base.component';
+import { HttpClient } from '@angular/common/http';
+import { EndPointApi } from '../../../../_helpers/endpointapi';
 
 declare const numeral: any;
 @Component({
@@ -75,6 +77,9 @@ export class DataTableComponent implements OnInit, AfterViewInit, OnDestroy {
     eventSelectionType = Utils.getEnumKey(GaugeEventType, GaugeEventType.select);
     dataFilter: TableFilter | AlarmsFilter | ReportsFilter;
     private lastRenderedSignature = '';
+    sourceError = '';
+    sourceNotice = '';
+    private sourceStop$ = new Subject<void>();
 
     constructor(
         private dataService: DataConverterService,
@@ -85,7 +90,8 @@ export class DataTableComponent implements OnInit, AfterViewInit, OnDestroy {
         private languageService: LanguageService,
         private commandService: CommandService,
         public dialog: MatDialog,
-        private translateService: TranslateService) { }
+        private translateService: TranslateService,
+        private http: HttpClient) { }
 
     ngOnInit() {
         this.dataSource.data = this.data;
@@ -120,6 +126,7 @@ export class DataTableComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngOnDestroy() {
+        this.sourceStop$.next();this.sourceStop$.complete();
         try {
             this.destroy$.next(null);
             this.destroy$.complete();
@@ -200,9 +207,32 @@ export class DataTableComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     setOptions(options: TableOptions): void {
+        this.sourceStop$.next();
         this.tableOptions = { ...this.tableOptions, ...options };
         this.loadData();
         this.onRangeChanged(this.tableOptions.lastRange || TableRangeType.last1h);
+        this.startMelissaSource();
+    }
+
+    private startMelissaSource(): void {
+        const source=this.tableOptions.source;
+        this.sourceError='';this.sourceNotice='';
+        if (this.isEditor || this.type!==TableType.data || !source || !['melissa-events','melissa-deliveries'].includes(source)) return;
+        const delivery=source==='melissa-deliveries';
+        const url=EndPointApi.getURL()+'/api/melissa/'+(delivery?'deliveries':'events?limit=1000');
+        timer(0,2500).pipe(takeUntil(this.destroy$),takeUntil(this.sourceStop$),switchMap(()=>this.http.get<any>(url).pipe(
+            catchError(()=>{this.sourceError='Αδυναμία ενημέρωσης · οι ορατές εγγραφές μπορεί να είναι παλιές.';return of(null);})
+        ))).subscribe(result=>{
+            if(result===null)return;
+            if(delivery&&result.completionTarget!=='wrapper'){this.sourceError='Μη έγκυρη πηγή ιστορικού παραδόσεων.';return;}
+            this.sourceError='';this.sourceNotice=delivery&&!result.sourceConfigured?'Η επιβεβαίωση παράδοσης στο Τυλιχτικό δεν έχει ακόμη συνδεθεί.':'';
+            const entries=delivery?result.entries:result;
+            if(!Array.isArray(entries)){this.sourceError='Μη έγκυρα δεδομένα πίνακα.';return;}
+            const values=entries.map(e=>delivery?[new Date(e.timestamp).toLocaleString('el-GR'),e.station,e.sscc,e.pallet_type,e.source_event_id]:
+                [e.id,new Date(e.timestamp).toLocaleString('el-GR'),e.device,e.kind,e.tag,e.value]);
+            this.data=values.map(row=>Object.fromEntries(row.map((value,i)=>['c'+i,{stringValue:String(value??'—')}])));
+            this.dataSource.data=this.data;
+        });
     }
 
     addValue(variableId: string, dt: number, variableValue: string) {

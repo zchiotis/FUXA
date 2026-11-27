@@ -11,15 +11,16 @@ describe('Melissa portable artwork upgrade',function(){
     let data;
     beforeEach(function(){data=fs.mkdtempSync(path.join(os.tmpdir(),'melissa-upgrade-'));});
     afterEach(function(){fs.rmSync(data,{recursive:true,force:true});});
-    it('updates old managed views while preserving enabled devices, credentials, custom views, settings and history; is idempotent',async function(){
+    it('preserves edited native views, browsed OPC UA tags, credentials, custom views, settings and history; is idempotent',async function(){
         await prepare({dataDir:data});
         let savedDevice,savedCustom,savedLayout;
         await database(data,async(run,all)=>{
             const row=(await all('SELECT * FROM devices WHERE name=?',['melissa-cplc']))[0],d=JSON.parse(row.value);
-            d.enabled=true;d.property.address='test-host';savedDevice=JSON.stringify(d);
+            d.enabled=true;d.property.address='opc.tcp://test-host:4840';d.tags={'user-node':{id:'user-node',address:'ns=3;s=RealBrowseResult'}};savedDevice=JSON.stringify(d);
             await run('UPDATE devices SET value=?,cntid=?,cntpwd=? WHERE name=?',[savedDevice,'keep-user','keep-secret','melissa-cplc']);
             const view=JSON.parse((await all('SELECT value FROM views WHERE name=?',['melissa_overview']))[0].value);
             view.profile={width:1440,height:1050,bkcolor:'#0b1321ff'};
+            Object.values(view.items).find(i=>i.type==='svg-ext-value').property.variableId='user-node';
             await run('UPDATE views SET value=? WHERE name=?',[JSON.stringify(view),view.id]);
             savedCustom=JSON.stringify({id:'custom',name:'Do not replace',items:{}});
             await run('INSERT INTO views VALUES(?,?)',['custom',savedCustom]);
@@ -39,7 +40,8 @@ describe('Melissa portable artwork upgrade',function(){
             const d=(await all('SELECT * FROM devices WHERE name=?',['melissa-cplc']))[0];
             assert.equal(d.value,savedDevice);assert.equal(d.cntid,'keep-user');assert.equal(d.cntpwd,'keep-secret');
             const views=Object.fromEntries((await all('SELECT * FROM views')).map(r=>[r.name,JSON.parse(r.value)]));
-            assert.equal(views.melissa_overview.profile.width,1740);assert.ok(views.melissa_semolina);
+            assert.equal(views.melissa_overview.profile.width,1440);assert.ok(views.melissa_semolina);
+            assert.equal(Object.values(views.melissa_overview.items).find(i=>i.type==='svg-ext-value').property.variableId,'user-node');
             assert.equal(JSON.stringify(views.custom),savedCustom);assert.equal(views.melissa_r6.items.custom.type,'custom');
             const layout=JSON.parse((await all('SELECT value FROM general WHERE name=?',['layout']))[0].value);
             assert.equal(layout.start,'custom');assert.equal(layout.header.title,'Keep title');assert.ok(layout.navigation.items.some(i=>i.text==='Keep me'));
@@ -47,6 +49,22 @@ describe('Melissa portable artwork upgrade',function(){
         assert.equal(fs.readFileSync(settings,'utf8'),'// user settings');
         assert.equal(fs.readFileSync(path.join(data,'_db/history-sentinel'),'utf8'),'historical data');
         assert.equal((await prepare({dataDir:data})).changed,false);
+    });
+    it('archives the legacy S7 configuration and replaces it with disabled OPC UA and empty browse tags',async function(){
+        await prepare({dataDir:data});
+        const old={id:'melissa-cplc',type:'SiemensS7',enabled:true,property:{address:'192.168.214.105',rack:0,slot:1},tags:{legacy:{id:'legacy',address:'DB100.DBX0.1'}}};
+        const iframe={id:'melissa_overview',items:{MELISSA_IFRAME_overview:{id:'MELISSA_IFRAME_overview',type:'svg-ext-own_ctrl-iframe',property:{address:'/melissa/?page=overview&embed=1'}}}};
+        await database(data,async(run)=>{
+            await run('UPDATE devices SET value=?,cntid=?,cntpwd=? WHERE name=?',[JSON.stringify(old),'old-user','old-secret','melissa-cplc']);
+            await run('UPDATE views SET value=? WHERE name=?',[JSON.stringify(iframe),'melissa_overview']);
+        });
+        const result=await prepare({dataDir:data});const backup=JSON.parse(fs.readFileSync(result.backup));
+        assert.deepEqual(JSON.parse(backup.legacyCplc.value),old);assert.deepEqual(backup.views.melissa_overview,iframe);
+        await database(data,async(run,all)=>{
+            const row=(await all('SELECT * FROM devices WHERE name=?',['melissa-cplc']))[0],d=JSON.parse(row.value);
+            assert.equal(d.type,'OPCUA');assert.equal(d.enabled,false);assert.deepEqual(d.tags,{});assert.equal(row.cntpwd,null);
+            assert.equal(JSON.parse((await all('SELECT * FROM views WHERE name=?',['melissa_overview']))[0].value).property.melissaNativeVersion,1);
+        });
     });
     it('leaves a different project unchanged',async function(){
         await prepare({dataDir:data});

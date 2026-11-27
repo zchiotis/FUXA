@@ -23,6 +23,14 @@
                             <!-- <mat-option [value]="tableType.alarmsHistory">{{'table.property-type-alarms-history' | translate}}</mat-option> -->
                         </mat-select>
                     </div>
+                    <div class="my-form-field mt5" *ngIf="tableTypeCtrl.value === tableType.data">
+                        <span>Data source</span>
+                        <mat-select [(value)]="options.source" (selectionChange)="onTableChanged()">
+                            <mat-option [value]="'tags'">FUXA tags</mat-option>
+                            <mat-option [value]="'melissa-events'">Melissa · events DB</mat-option>
+                            <mat-option [value]="'melissa-deliveries'">Melissa · παραδόσεις στο Τυλιχτικό</mat-option>
+                        </mat-select>
+                    </div>
                     <div class="section-inline-margin2"></div>
                     <ng-container *ngIf="tableTypeCtrl.value === tableType.history">
                         <div class="my-form-field inbk data-range">

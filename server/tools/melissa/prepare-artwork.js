@@ -1,5 +1,5 @@
 'use strict';
-// Upgrade owned artwork only. Device configuration, settings and history remain untouched.
+// One-time iframe/S7 migration. Thereafter native editor changes and OPC UA tags are preserved.
 const fs=require('fs'),path=require('path'),sqlite3=require('sqlite3');
 async function prepare(options={}){
     const root=options.root||path.resolve(__dirname,'../../..'),data=options.dataDir||path.join(root,'data'),app=path.join(data,'_appdata');
@@ -13,23 +13,24 @@ async function prepare(options={}){
     const all=(sql,args=[])=>new Promise((resolve,reject)=>db.all(sql,args,(e,rows)=>e?reject(e):resolve(rows)));
     const tables=['general','views','devices','devicesSecurity','texts','alarms','notifications','scripts','reports','locations'];
     let transaction=false,backup=null,changed=false;
-    const owned=(view,id)=>{
+    const legacy=(view,id)=>{
         const items=Object.values(view?.items||{}),page=id.replace(/^melissa_/,'');
         return view?.id===id&&items.length===1&&items[0].id==='MELISSA_IFRAME_'+page&&
             items[0].type==='svg-ext-own_ctrl-iframe'&&items[0].property?.address==='/melissa/?page='+page+'&embed=1';
     };
+    const native=view=>view?.property?.melissaNativeVersion===1;
     try{
         if(existing){
             const rows=await all('SELECT name,value FROM general WHERE name IN (?,?)',['name','layout']);
             const general=Object.fromEntries(rows.map(r=>[r.name,JSON.parse(r.value)]));
             const oldRows=await all('SELECT name,value FROM views'),oldViews=Object.fromEntries(oldRows.map(r=>[r.name,JSON.parse(r.value)]));
-            if(general.name!==project.name||!owned(oldViews.melissa_overview,'melissa_overview')){
+            if(general.name!==project.name||!(legacy(oldViews.melissa_overview,'melissa_overview')||native(oldViews.melissa_overview))){
                 console.log('Existing project is not an owned Melissa project; project and widgets preserved.');return {changed:false,recognized:false};
             }
             const layout=structuredClone(general.layout||{}),oldLayout=structuredClone(layout),updates=[];
             for(const view of project.hmi.views){
                 const old=oldViews[view.id];
-                if(old&&!owned(old,view.id))continue;
+                if(old&&(native(old)||!legacy(old,view.id)))continue;
                 if(JSON.stringify(old)!==JSON.stringify(view))updates.push(view);
             }
             layout.zoom='autoresize';layout.autoresize=true;
@@ -38,18 +39,25 @@ async function prepare(options={}){
             layout.navigation.items=(layout.navigation.items||[]).map(item=>{
                 const template=target.items.find(d=>d.view===item.view);return template?{...item,text:template.text,icon:template.icon}:item;
             });
-            for(const item of target.items)if(!layout.navigation.items.some(i=>i.view===item.view)&&(!oldViews[item.view]||owned(oldViews[item.view],item.view))){
+            for(const item of target.items)if(!layout.navigation.items.some(i=>i.view===item.view)&&(!oldViews[item.view]||legacy(oldViews[item.view],item.view)||native(oldViews[item.view]))){
                 const before=item.view==='melissa_semolina'?layout.navigation.items.findIndex(i=>i.view==='melissa_buffer'):-1;
                 layout.navigation.items.splice(before<0?layout.navigation.items.length:before,0,item);
             }
             layout.header={...layout.header,bkcolor:project.hmi.layout.header.bkcolor,fgcolor:project.hmi.layout.header.fgcolor};
-            changed=updates.length>0||JSON.stringify(layout)!==JSON.stringify(oldLayout);
+            const oldCplc=(await all('SELECT * FROM devices WHERE name=?',['melissa-cplc']))[0];
+            const replaceCplc=oldCplc&&JSON.parse(oldCplc.value).type==='SiemensS7';
+            const oldSecurity=replaceCplc?await all('SELECT * FROM devicesSecurity WHERE name=?',['melissa-cplc']):[];
+            changed=updates.length>0||replaceCplc||JSON.stringify(layout)!==JSON.stringify(oldLayout);
             if(changed){
                 const dir=path.join(app,'backups');fs.mkdirSync(dir,{recursive:true});backup=path.join(dir,'melissa-artwork-'+Date.now()+'.json');
-                fs.writeFileSync(backup,JSON.stringify({targetVersion:'0.3.0',views:Object.fromEntries(updates.map(v=>[v.id,oldViews[v.id]||null])),layout:oldLayout},null,2));
+                fs.writeFileSync(backup,JSON.stringify({targetVersion:'0.4.0-native-opcua',views:Object.fromEntries(updates.map(v=>[v.id,oldViews[v.id]||null])),layout:oldLayout,legacyCplc:replaceCplc?oldCplc:null,legacySecurity:oldSecurity},null,2));
                 await run('BEGIN IMMEDIATE');transaction=true;
                 for(const view of updates)await run('INSERT OR REPLACE INTO views(name,value) VALUES(?,?)',[view.id,JSON.stringify(view)]);
                 await run('INSERT OR REPLACE INTO general(name,value) VALUES(?,?)',['layout',JSON.stringify(layout)]);
+                if(replaceCplc){
+                    await run('UPDATE devices SET value=?,connection=NULL,cntid=NULL,cntpwd=NULL WHERE name=?',[JSON.stringify(project.devices['melissa-cplc']),'melissa-cplc']);
+                    await run('DELETE FROM devicesSecurity WHERE name=?',['melissa-cplc']);
+                }
             }
         }else{
             changed=true;await run('BEGIN');transaction=true;
@@ -74,7 +82,7 @@ async function prepare(options={}){
             }
             fs.writeFileSync(target,source);
         }
-        console.log(existing?'Melissa artwork updated; devices, settings and history preserved.':'Melissa project prepared; all external devices disabled.');
+        console.log(existing?'Melissa native migration checked; editor changes, OPC UA tags and history preserved.':'Native Melissa project prepared; OPC UA CPLC tags await user browse, all devices disabled.');
         return {changed,recognized:true,backup};
     }catch(error){if(transaction)await run('ROLLBACK');throw error;}
     finally{await new Promise(resolve=>db.close(resolve));}

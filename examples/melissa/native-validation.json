@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "method": "static generated-project validation",
+  "views": 59,
+  "editableElements": 1905,
+  "iframeElements": 0,
+  "protocol": "OPCUA",
+  "preselectedCplcTags": 0,
+  "compiledFuxaTest": false,
+  "realPlcValidation": false
+}

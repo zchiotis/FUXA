@@ -1,35 +1,32 @@
-# Έλεγχος HMI και πραγματικού PLC
+# Native HMI / OPC UA · έλεγχοι
 
-## Offline εργασία στον υπολογιστή προετοιμασίας
+## Έγιναν τοπικά, χωρίς FUXA runtime
 
-Ολοκληρώθηκαν αποσυμπίεση/ανάκτηση interfaces, σύγκριση archive με αντίγραφο directory project, παραγωγή manifest/project/widgets και συγγραφή runtime/UI/CI.
+- Παραγωγή του native `.fuxap`, 59 SVG views και ανεξάρτητων element/property mappings.
+- Στατική επαλήθευση: 1.905 ξεχωριστά editor objects, μηδέν iframes, μοναδικά IDs, έγκυρες native destinations, σωστό σχήμα Values/Semaphores και καμία κατασκευασμένη OPC UA διεύθυνση tag.
+- Έλεγχος σύνταξης των εργαλείων παραγωγής και migration.
+- Απόδοση του στατικού native SVG για οπτικό έλεγχο. Αυτό δεν είναι έλεγχος του μεταγλωττισμένου editor ή των OPC UA bindings.
 
-Δεν εκτελέστηκε FUXA ή τοπικό HMI test. Η αρχική εγκατάσταση server dependencies είχε ολοκληρωθεί πριν διευκρινιστεί ότι η εκτέλεση/δοκιμές θα γίνουν αλλού· δεν χρησιμοποιήθηκε για εκκίνηση runtime. Δεν συνεχίζεται τοπική εγκατάσταση ή compilation. Δεν έγινε σύνδεση με CPLC/Kawasaki/JH, PLC write, compile/download ή αλλαγή ρυθμίσεων PLC. Το TIA Portal δεν άνοιξε project από την εργασία αυτή.
+Αποτελέσματα: `native-validation.json`. Δεν εγκαταστάθηκε ή εκτελέστηκε FUXA στον τοπικό υπολογιστή. Δεν έγινε σύνδεση PLC, browse, write, TIA compile/download ή τροποποίηση πηγών PLC.
 
-## GitHub CI · υπολογιστής build
+## Προετοιμασμένοι έλεγχοι για επόμενο Windows build · δεν εκτελέστηκαν σε αυτή την αλλαγή
 
-Το workflow `Melissa FUXA-AGV Windows` εκτελεί σε Windows runner:
+- Angular compilation, OPC UA dependency loading και απομονωμένο FUXA startup.
+- Native home και 16 κύριες οθόνες, native dialogs, μηδέν runtime iframes, περιστροφή με όρθια γράμματα και 1920×1080 fitting.
+- Μετατροπή παλιού iframe/S7 project, backup παλιάς σύνδεσης και διατήρηση editor αλλαγών, OPC UA tags, credentials, ιστορικού και custom views.
+- Υπάρχοντες έλεγχοι logging, read-only guard και Kawasaki. Οι παλιοί έλεγχοι S7 decoding αφορούν μόνο τον ιστορικό adapter, όχι το νέο transport του CPLC.
 
-- unit tests για exact mapping, UInt/STRING decoding, read-only guard, πλήρες sample ή invalidation, DAQ interval, freshness και SQLite persistence,
-- τον υπάρχοντα Kawasaki driver suite με synthetic telnet server,
-- API authorization checks,
-- πραγματικό Angular compile,
-- isolated FUXA smoke test με όλες τις production συσκευές disabled,
-- browser checks και screenshots για 16 οθόνες, synthetic sample και απώλεια επικοινωνίας, καθώς και native FUXA home embedding,
-- αναβάθμιση artwork με διατήρηση ενεργοποιημένων συσκευών, credentials, custom views, ρυθμίσεων και ιστορικού· επανάληψη χωρίς νέες αλλαγές,
-- πέντε Palomat modals, περιστροφή με όρθια γράμματα, fitting overview σε 1920×1080, νέα ιστορική σημασία παράδοσης στο Τυλιχτικό χωρίς επανερμηνεία παλιών εγγραφών.
+Το παλιό επιτυχές build 5 αφορούσε την προηγούμενη αρχιτεκτονική iframe/S7. Δεν αποτελεί επαλήθευση αυτής της αλλαγής. Δεν έγινε νέο build ή push που θα ενεργοποιούσε build.
 
-Η κατάσταση κάθε run και τα screenshots είναι τα πρωτογενή τεκμήρια. Το έγγραφο δεν δηλώνει εκ των προτέρων επιτυχία. Τα δοκιμαστικά δεδομένα CI αφαιρούνται από το portable package. Το runtime δεν περιλαμβάνει simulator ή demo telemetry.
+## Έλεγχος από τον υπολογιστή δοκιμών με πραγματικό OPC UA CPLC · ανοικτός
 
-## Επαλήθευση στον υπολογιστή δοκιμών με πραγματικό PLC · ανοικτή
+1. Επιβεβαίωση πρόσβασης στο endpoint που έδωσε ο χρήστης: `opc.tcp://192.168.214.105:4840`. Ρυθμίσεις ασφάλειας και trust σύμφωνα με τον πραγματικό server.
+2. Browse και προσθήκη επιλεγμένων πραγματικών nodes. Επιβεβαίωση datatype, δικαιωμάτων και σημασίας· τα offline offsets δεν είναι NodeIds.
+3. Επιλογή tags στα native Properties/Actions/Table cells, αποθήκευση, επαναφόρτωση editor και restart. Επιβεβαίωση ότι οι προσωπικές αντιστοιχίσεις διατηρούνται.
+4. Σύγκριση πραγματικών τιμών σε station Operational/Occupied/AGVRequest/ROBRequest/Release, UInt PalletType και SSCC με αρχικά μηδενικά. Ξεχωριστή επιβεβαίωση φυσικής κυψέλης και PLC producer.
+5. Δοκιμή χρώματος βέλους, παρουσίας παλέτας, διακοπής/ανάκτησης επικοινωνίας και ποιότητας OPC UA. Σταθερή τιμή δεν σημαίνει από μόνη της παλιά δεδομένα· απαιτούνται server quality, session health και συμφωνημένο heartbeat.
+6. Έλεγχος DAQ και χωριστής event DB με πραγματικές αλλαγές, timestamps, restart και ρυθμό αύξησης. Σύντομοι παλμοί απαιτούν PLC latch/counter/sequence για εγγυημένη καταγραφή.
+7. Πραγματικές πηγές για buffer, SAP, Barcode, Palomats και SEMOLINA. Επιβεβαίωση άφιξης συγκεκριμένου SSCC στο Τυλιχτικό πριν ενεργοποιηθεί delivery writer.
+8. Συμφωνία command nodes, ownership, pulse, confirmation και interlocks πριν ενεργοποιηθεί οποιαδήποτε εντολή.
 
-1. Καταγράψτε build commit, PLC version/checksum και τη διαδρομή από τον test host προς `192.168.214.105:102`.
-2. Ενεργοποιήστε μόνο CPLC read-only device. Συγκρίνετε DB100 επιλεγμένα πεδία με πραγματικό PLC watch/εγκεκριμένα γνωστά δεδομένα: R1-1OUT, WRAP-IN byte 826, Palomat fields και Interface byte 850. Ελέγξτε SSCC 18 χαρακτήρων και αρχικά μηδενικά.
-3. Συγκρίνετε CPLC/AGV heartbeat μεταβολές, αποσυνδέστε ελεγχόμενα το HMI από τη διαδρομή και ελέγξτε bad/stale/recovery, χωρίς χειρισμό μηχανών.
-4. Ελέγξτε κάθε Kawasaki χωριστά, mode/program/error log, controller timestamps και συμπεριφορά disconnect/reconnect. Επιβεβαιώστε controller identity πριν ενεργοποιήσετε μαζικό polling.
-5. Ανοίξτε native DAQ και `melissa-events.db`: ελέγξτε αλλαγές, timestamps, restart persistence, πραγματικό ρυθμό αύξησης και συμφωνήστε retention/backup.
-6. Επιβεβαιώστε τη φυσική πηγή κάθε station. Η φρεσκάδα DB100 ανάγνωσης δεν αποδεικνύει φρεσκάδα robot PLC αν η GET ή η λογική παραγωγής του station δεν λειτουργεί.
-7. Ολοκληρώστε optimized source bindings για SAP/EIDOS/DB8 και ορισμό επιτυχίας/abort παράδοσης πριν ενεργοποιηθεί writer στο delivery ledger.
-8. Συμφωνήστε command bit, writer ownership, διάρκεια pulse, confirmation, permissives, interlocks και audit πριν προστεθεί οποιοσδήποτε χειρισμός.
-
-Η επιτυχία HMI/CI και η επιτυχία αυτής της λίστας commissioning τεκμηριώνονται χωριστά. Κανένα βήμα commissioning δεν έχει ακόμη καταγραφεί ως επιτυχές.
+Κανένα βήμα πραγματικού commissioning δεν έχει σημειωθεί ως επιτυχές.

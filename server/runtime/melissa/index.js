@@ -32,12 +32,16 @@ function create(runtime, SQLite) {
     const scoped = id => String(id).startsWith('melissa-');
     function onValues(event) {
         if (!scoped(event.id)) return;
+        const opcUa=Object.values(runtime.project.getDevices()||{}).some(d=>d.id===event.id&&d.type==='OPCUA');
         for (const item of Object.values(event.values || {})) {
             const key = event.id + '/' + item.id, previous = state.get(key);
             const good = item.value !== null && item.value !== undefined && item.quality !== 'bad';
             const timestamp = Number(item.timestamp) || 0;
             const current = { value: good ? item.value : previous?.value ?? null,
                 timestamp: good ? timestamp : previous?.timestamp || 0, valid: good };
+            // UA subscriptions timestamp a value change, not every healthy poll.
+            // Keep the source timestamp while measuring observation freshness separately.
+            if(opcUa)current.observedAt=good?Date.now():previous?.observedAt||0;
             state.set(key, current);
             if (!previous || previous.value !== current.value || previous.valid !== current.valid) {
                 record(good ? 'tag-change' : 'tag-invalid', event.id, item.id, current, previous || null);
@@ -58,17 +62,18 @@ function create(runtime, SQLite) {
     const get = (device, tag, now = Date.now()) => {
         const item = state.get(device + '/' + tag);
         const status = devices.get(device);
+        const freshnessAt=item?.observedAt||item?.timestamp;
         const quality = !item?.timestamp ? 'unknown' : !item.valid || !['connect-ok', 'connect-on'].includes(status) ? 'bad'
-            : now - item.timestamp > staleMs ? 'stale' : 'good';
+            : now - freshnessAt > staleMs ? 'stale' : 'good';
         return { value: item?.value ?? null, timestamp: item?.timestamp || null,
-            ageMs: item?.timestamp ? now - item.timestamp : null, quality };
+            ageMs: freshnessAt ? now - freshnessAt : null, observedAt:item?.observedAt||null, quality };
     };
     function snapshot(now = Date.now()) {
         const cplc = Object.fromEntries(manifest.tags.map(t => [t.path, get('melissa-cplc', t.id, now)]));
         const projectDevices = Object.values(runtime.project.getDevices() || {});
         const configured = projectDevices.filter(d => scoped(d.id)).map(d => ({ id: d.id, name: d.name,
             enabled: !!d.enabled, status: devices.get(d.id) || 'not-connected',
-            lastGood: Math.max(0, ...Array.from(state.entries()).filter(([key]) => key.startsWith(d.id + '/')).map(([,v]) => v.timestamp)) }));
+            lastGood: Math.max(0, ...Array.from(state.entries()).filter(([key]) => key.startsWith(d.id + '/')).map(([,v]) => v.observedAt||v.timestamp)) }));
         const kawasaki = {};
         for (const c of manifest.controllers) {
             const device = projectDevices.find(d => d.id === 'melissa-kawasaki-' + c.robot);

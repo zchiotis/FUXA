@@ -531,6 +531,7 @@ export enum TableType {
 }
 
 export interface TableOptions {
+    source?: 'tags' | 'melissa-events' | 'melissa-deliveries';
     paginator?: {
         show: boolean;
     };

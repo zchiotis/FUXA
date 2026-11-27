@@ -224,6 +224,10 @@ export class TagPropertyService {
                     tag.label = n.text;
                     tag.type = n.type;
                     tag.address = n.id;
+                    if (device.id === 'melissa-cplc' && device.property?.melissa) {
+                        tag.access = 'read';
+                        tag.daq = {enabled: true, changed: true, interval: 10, restored: false};
+                    }
                     this.checkToAdd(tag, result.device);
                     if (tagsMap) {
                         tagsMap[tag.id] = tag;

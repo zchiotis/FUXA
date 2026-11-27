@@ -83,4 +83,13 @@ describe('Melissa event persistence and freshness',function(){
         await service.close();service=create(runtime);await service.ready;
         assert.deepEqual(await service.deliveryHistory(),[]);
     });
+    it('does not confuse an unchanged OPC UA value timestamp with a stale observation',async function(){
+        runtime.project.getDevices=()=>({'melissa-cplc':{id:'melissa-cplc',name:'UA',type:'OPCUA',enabled:true,tags:{}}});
+        runtime.events.emit('device-status:changed',{id:'melissa-cplc',status:'connect-ok'});
+        const sourceTimestamp=Date.now()-60000;
+        runtime.events.emit('device-value:changed',{id:'melissa-cplc',values:{'db100.R1-1OUT.Occupied':{id:'db100.R1-1OUT.Occupied',value:false,timestamp:sourceTimestamp}}});
+        const now=Date.now(),sample=service.snapshot(now).cplc['R1-1OUT.Occupied'];
+        assert.equal(sample.timestamp,sourceTimestamp);assert.equal(sample.quality,'good');assert.ok(sample.observedAt);
+        assert.equal(service.snapshot(now+20).cplc['R1-1OUT.Occupied'].quality,'stale');
+    });
 });

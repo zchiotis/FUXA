@@ -1,5 +1,7 @@
 # Offline επιθεώρηση · 20 Νοεμβρίου 2026
 
+Το παρόν είναι ιστορική ανάλυση των PLC artifacts και των παλιών S7 offsets. Το τρέχον HMI χρησιμοποιεί native FUXA στοιχεία και OPC UA, με επιλογή των πραγματικών nodes από τον χρήστη. Οι offline διευθύνσεις δεν χρησιμοποιούνται ως OPC UA NodeIds. Δείτε το [README.md](README.md) για την τρέχουσα υλοποίηση.
+
 ## Πηγές και μέθοδος
 
 Επιθεωρήθηκαν το `Melissa/CPLC/Melissa_CPLC_v0.4.zap20`, αντίγραφο του directory project `Melissa_CPLC_v0.4`, τα εσωτερικά XML interfaces στο `System/PEData.plf`, το Lucene offline search index, το `CPLC_IF.md`, το export DB100 v3 και ο υπάρχων legacy DB666 χάρτης. Τα synced `sources` δεν άλλαξαν.
