@@ -1041,7 +1041,12 @@ export class GaugesManager {
      * @returns list of signals id (tag) that are binded to a gauge
      */
     getBindedSignalsId() {
-        return Object.keys(this.memorySigGauges);
+        // SVG shapes, values and semaphores have bindings but no Angular control
+        // instance in memorySigGauges. They still need selective tag updates.
+        return [...new Set([
+            ...this.hmiService.getMappedVariables(false).map(variable => variable.id),
+            ...Object.keys(this.memorySigGauges)
+        ])];
     }
 }
 
