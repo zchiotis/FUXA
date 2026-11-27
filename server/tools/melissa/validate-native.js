@@ -18,6 +18,10 @@ function validate(){
             assert.ok(item.type!=='svg-ext-own_ctrl-iframe');
             if(item.type==='svg-ext-value')assert.equal(top.get(item.id).children.filter(n=>n.tag).length,1);
             if(item.type==='svg-ext-gauge_semaphore')assert.equal(top.get(item.id).children.find(n=>n.tag)?.tag,'circle');
+            if(item.id.includes('_request_')&&!item.id.includes('request_button')){
+                let paintable=false;visit(top.get(item.id),n=>{if(n.tag==='path'&&n.attrs.id?.startsWith('svg_'))paintable=true;});
+                assert.ok(paintable,'Native arrow color target missing: '+item.id);
+            }
             if(item.property.variableId)assert.ok(tags.has(item.property.variableId),'Unknown prebound tag '+item.property.variableId);
             for(const e of item.property.events||[]){assert.ok(['onpage','ondialog'].includes(e.action));assert.ok(viewIds.has(e.actparam),'Missing native target '+e.actparam);}
         }

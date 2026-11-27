@@ -12,6 +12,13 @@ class View{
     constructor(page,name,width=1740,height=1000){this.page=page;this.id='melissa_'+page;this.name=name;this.width=width;this.height=height;this.items={};this.parts=[];this.slots=[];this.counter=0;}
     add(key,name,body,{type=SHAPE,property={},hint=null,transform='',style=''}={}){
         const id='MEL_'+clean(this.page)+'_'+clean(key);if(this.items[id])throw new Error('Duplicate native element '+id);
+        // FUXA's native color walker targets descendants named svg_* or SHE*.
+        // Simple shapes expose their paintable primitive, while complex artwork
+        // keeps its authored colors and uses its separate status indicator.
+        if(type===SHAPE&&!/<(?:g|svg|image)\b/.test(body)){
+            let part=0;const tags=body.includes('<rect')?'rect|path|circle|ellipse|line|polyline|polygon':'rect|path|circle|ellipse|line|polyline|polygon|text';
+            body=body.replace(new RegExp('<('+tags+')\\b','g'),(_,tag)=>'<'+tag+' id="svg_'+id+'_'+(++part)+'"');
+        }
         this.items[id]={id,name,type,label:type===VALUE?'Value':type===LAMP?'HtmlSemaphore':type===TABLE?'HtmlTable':type==='svg-ext-own_ctrl-panel'?'Panel':'Shapes',
             property:{variableId:'',ranges:[],actions:[],events:[],...property}};
         this.parts.push(`<g id="${id}" type="${type}"${transform?` transform="${esc(transform)}"`:''}${style?` style="${esc(style)}"`:''}>${body}</g>`);
@@ -83,6 +90,9 @@ function overview(model,rotated=false){
             }
         });
         const transform=base+parents.map(p=>p.attrs?.transform||'').filter(Boolean).join(' ')+' '+(node.attrs.transform||'');
+        if(key.startsWith('request_')){
+            let part=0;visit(copy,n=>{if(n.tag==='path')n.attrs.id='svg_'+clean(v.page)+'_'+clean(key)+'_'+(++part);});
+        }
         const body=type===LAMP?copy.children.filter(c=>typeof c!=='string').map(xml).join(''):xml(copy);
         const id=v.add(key,name,body,{property,hint,type,transform:transform.trim(),style});output.push(id);
     }
