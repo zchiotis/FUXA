@@ -96,6 +96,11 @@ export class GaugeBaseComponent {
     }
 
     static runActionShow(element, type, gaugeStatus: GaugeStatus) {
+        // The editor persists initial SVG visibility as a presentation
+        // attribute. SVG.js show() only clears the inline display style.
+        if (element.node?.getAttribute('display') === 'none') {
+            element.node.removeAttribute('display');
+        }
         let actionRef = <GaugeActionStatus>{ type: type, animr: element.show() };
         if (gaugeStatus.actionRef) {
             actionRef.spool = gaugeStatus.actionRef.spool;
