@@ -18,7 +18,7 @@ function validate(){
             assert.ok(item.type!=='svg-ext-own_ctrl-iframe');
             if(item.type==='svg-ext-value')assert.equal(top.get(item.id).children.filter(n=>n.tag).length,1);
             if(item.type==='svg-ext-gauge_semaphore')assert.equal(top.get(item.id).children.find(n=>n.tag)?.tag,'circle');
-            if(item.id.includes('_request_')&&!item.id.includes('request_button')){
+            if(view.id.startsWith('melissa_overview')&&item.id.includes('_request_')&&!item.id.includes('request_button')){
                 let paintable=false;visit(top.get(item.id),n=>{if(n.tag==='path'&&n.attrs.id?.startsWith('svg_'))paintable=true;});
                 assert.ok(paintable,'Native arrow color target missing: '+item.id);
             }

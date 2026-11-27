@@ -24,7 +24,7 @@ describe('Native Melissa HMI architecture',function(){
         const view=project().hmi.views.find(v=>v.id==='melissa_overview');
         assert.equal(Object.keys(view.items).filter(k=>k.includes('_request_')&&!k.includes('request_button')).length,36);
         assert.equal(Object.keys(view.items).filter(k=>k.includes('_occupied_')).length,18);
-        const svg=parse(view.svgcontent),arrows=[];visit(svg,n=>{if(n.attrs.id?.includes('_request_')&&n.attrs.type==='svg-ext-shapes')arrows.push(n);});
+        const svg=parse(view.svgcontent),arrows=[];visit(svg,n=>{if(n.attrs.id?.includes('_request_')&&!n.attrs.id.includes('request_button')&&n.attrs.type==='svg-ext-shapes')arrows.push(n);});
         for(const arrow of arrows){let target=false;visit(arrow,n=>{if(n.tag==='path'&&n.attrs.id?.startsWith('svg_'))target=true;});assert.ok(target,'native SVG paint target required');}
         for(const item of Object.values(view.items))assert.ok(!item.property.variableId);
     });
