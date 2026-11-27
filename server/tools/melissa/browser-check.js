@@ -54,8 +54,17 @@ async function main(){
     }
     const history=await(await fetch('http://127.0.0.1:1881/api/melissa/deliveries')).json();
     assert.equal(history.completionTarget,'wrapper');assert.equal(history.sourceConfigured,false);
+    const touch=await browser.newContext({viewport:{width:1920,height:1080},hasTouch:true});
+    const touchPage=await touch.newPage();touchPage.on('pageerror',e=>errors.push(e.message));
+    await touchPage.goto('http://127.0.0.1:1881/home');await touchPage.waitForSelector('#MEL_overview_rotation');
+    const palomat=Object.values(overview.items).find(i=>i.property.events?.some(e=>e.actparam==='melissa_palomat_1'));
+    await touchPage.locator('#'+palomat.id).tap();await touchPage.waitForSelector('app-fuxa-view-dialog');
+    assert.equal(await touchPage.locator('app-fuxa-view-dialog').count(),1,'one tap must open one native dialog');
+    await touchPage.locator('.dialog-modal-close i').tap();await touchPage.waitForSelector('app-fuxa-view-dialog',{state:'detached'});
+    await touchPage.locator('#MEL_overview_rotation').tap();await touchPage.waitForSelector('#MEL_overview_180_rotation');
+    await touchPage.screenshot({path:path.join(out,'native-touch-180.png')});await touch.close();
     assert.deepEqual(errors,[]);
-    fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({status:'passed',native:true,iframes:0,screenViews:16,totalViews:project.hmi.views.length,protocol:'OPCUA',preselectedCplcTags:0,productionDevicesEnabled:false,plcValidation:false,editorBindingValidation:'Requires real server browse and user-selected tags'},null,2));
+    fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({status:'passed',native:true,iframes:0,screenViews:16,totalViews:project.hmi.views.length,protocol:'OPCUA',preselectedCplcTags:0,productionDevicesEnabled:false,touchEmulation:true,physicalTouchScreenValidation:false,plcValidation:false,editorBindingValidation:'Requires real server browse and user-selected tags'},null,2));
 }
 main().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{
     if(browser)await browser.close();if(serverProcess){serverProcess.kill();await new Promise(r=>{if(serverProcess.exitCode!==null)r();else serverProcess.once('exit',r);});}
